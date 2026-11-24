@@ -1,0 +1,573 @@
+'use client';
+
+import React, { useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import {
+  ShieldCheck,
+  AlertCircle,
+  CheckCircle2,
+  Clock,
+  XCircle,
+  MessageCircle,
+  Lock,
+} from 'lucide-react';
+import { useStore } from '@/components/providers/StoreProviders';
+import { BRAND, formatPaiseToInr } from '@/data/brand';
+import type { CreatedOrderResponse } from '@/domain/orders/service';
+
+const INDIAN_STATES = [
+  'Tamil Nadu',
+  'Puducherry',
+  'Karnataka',
+  'Kerala',
+  'Andhra Pradesh',
+  'Telangana',
+  'Maharashtra',
+  'Delhi',
+  'Gujarat',
+  'West Bengal',
+  'Other Indian State / UT',
+];
+
+function getOrCreateIdempotencyKey(): string {
+  if (typeof window === 'undefined') return `idem_${Date.now()}`;
+  const existing = sessionStorage.getItem('am_checkout_idem_key');
+  if (existing && existing.length >= 16) return existing;
+  const created =
+    typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+      ? `idem_${crypto.randomUUID()}`
+      : `idem_${Date.now()}_${Math.random().toString(36).slice(2, 12)}`;
+  sessionStorage.setItem('am_checkout_idem_key', created);
+  return created;
+}
+
+export default function CheckoutPage() {
+  const router = useRouter();
+  const { cart, cartLoading, refreshCart, trackEvent } = useStore();
+  const errorSummaryRef = useRef<HTMLDivElement>(null);
+
+  const [customerName, setCustomerName] = useState('');
+  const [customerPhone, setCustomerPhone] = useState('');
+  const [customerEmail, setCustomerEmail] = useState('');
+  const [shippingAddressLine1, setShippingAddressLine1] = useState('');
+  const [shippingAddressLine2, setShippingAddressLine2] = useState('');
+  const [shippingCity, setShippingCity] = useState('Madurai');
+  const [shippingState, setShippingState] = useState('Tamil Nadu');
+  const [shippingPincode, setShippingPincode] = useState('');
+  const [deliveryNotes, setDeliveryNotes] = useState('');
+
+  const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
+  const [createdOrder, setCreatedOrder] = useState<CreatedOrderResponse | null>(null);
+  const [paymentBusy, setPaymentBusy] = useState(false);
+  const [paymentMessage, setPaymentMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    trackEvent({ eventName: 'begin_checkout', valuePaise: cart?.totalPaise });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Re-fetch authoritative shipping fee whenever delivery state changes
+  useEffect(() => {
+    void refreshCart(shippingState);
+  }, [shippingState, refreshCart]);
+
+  const handleSubmitOrder = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (submitting) return;
+    setFormError(null);
+    setFieldErrors({});
+    setSubmitting(true);
+
+    let utm: { utmSource?: string; utmMedium?: string; utmCampaign?: string } = {};
+    try {
+      const raw = sessionStorage.getItem('am_campaign_utm_v1');
+      if (raw) utm = JSON.parse(raw);
+    } catch {
+      // ignore
+    }
+
+    try {
+      const res = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          idempotencyKey: getOrCreateIdempotencyKey(),
+          customerName,
+          customerPhone,
+          customerEmail,
+          shippingAddressLine1,
+          shippingAddressLine2,
+          shippingCity,
+          shippingState,
+          shippingPincode,
+          deliveryNotes,
+          ...utm,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setFormError(data.error || 'Could not create order. Please review your details.');
+        if (data.fieldErrors) setFieldErrors(data.fieldErrors);
+        errorSummaryRef.current?.focus();
+        setSubmitting(false);
+        return;
+      }
+
+      const orderRes = data as CreatedOrderResponse;
+      setCreatedOrder(orderRes);
+      sessionStorage.removeItem('am_checkout_idem_key');
+      sessionStorage.setItem(
+        'am_last_order',
+        JSON.stringify({ orderNumber: orderRes.orderNumber, phone: customerPhone })
+      );
+      trackEvent({ eventName: 'payment_attempt', valuePaise: orderRes.totalPaise });
+      await refreshCart(shippingState);
+    } catch {
+      setFormError('Network failure while creating order. Your cart is preserved — please retry.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleSandboxOutcome = async (outcome: 'captured' | 'pending' | 'failed') => {
+    if (!createdOrder || paymentBusy) return;
+    setPaymentBusy(true);
+    setPaymentMessage(null);
+    try {
+      const res = await fetch('/api/payments/sandbox', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orderNumber: createdOrder.orderNumber,
+          outcome,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setPaymentMessage(data.error || 'Sandbox webhook call failed.');
+        setPaymentBusy(false);
+        return;
+      }
+
+      if (outcome === 'captured') {
+        trackEvent({ eventName: 'purchase', valuePaise: createdOrder.totalPaise });
+      }
+      router.push(
+        `/orders/track?order=${encodeURIComponent(createdOrder.orderNumber)}&status=${outcome}`
+      );
+    } catch {
+      setPaymentMessage('Network error during payment verification. You can safely retry.');
+      setPaymentBusy(false);
+    }
+  };
+
+  if (createdOrder) {
+    return (
+      <div className="mx-auto max-w-2xl px-4 py-12 sm:px-6">
+        <div className="rounded-3xl border border-[var(--border-strong)] bg-[var(--bg-surface)] p-6 shadow-md sm:p-8">
+          <div className="inline-flex items-center gap-2 rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-950">
+            <Lock className="h-3.5 w-3.5" aria-hidden="true" />
+            {createdOrder.paymentOrder.mode === 'sandbox'
+              ? 'SANDBOX TEST MODE — NO REAL PAYMENT CHARGED'
+              : 'HOSTED PAYMENT GATEWAY READY'}
+          </div>
+
+          <h1 className="font-display mt-4 text-2xl font-bold text-[var(--text-primary)] sm:text-3xl">
+            Complete Payment for Order{' '}
+            <span className="font-mono-num text-[var(--brand-crimson)]">
+              {createdOrder.orderNumber}
+            </span>
+          </h1>
+          <p className="mt-2 text-sm text-[var(--text-secondary)]">
+            Order total verified server-side:{' '}
+            <strong className="font-mono-num text-[var(--text-primary)]">
+              {formatPaiseToInr(createdOrder.totalPaise)}
+            </strong>{' '}
+            (Subtotal {formatPaiseToInr(createdOrder.subtotalPaise)} + Shipping{' '}
+            {createdOrder.shippingPaise === 0
+              ? 'FREE'
+              : formatPaiseToInr(createdOrder.shippingPaise)}
+            ).
+          </p>
+
+          {createdOrder.reusedIdempotent && (
+            <p className="mt-3 rounded-xl bg-[var(--brand-leaf-soft)] p-3 text-xs font-medium text-[var(--brand-leaf)]">
+              Duplicate submit detected and safely prevented — continuing your existing order.
+            </p>
+          )}
+
+          {createdOrder.paymentOrder.mode === 'sandbox' ? (
+            <div className="mt-6 space-y-3 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-canvas)] p-5">
+              <h2 className="text-sm font-bold text-[var(--text-primary)]">
+                Verify Server-Signed Payment Webhook (Sandbox)
+              </h2>
+              <p className="text-xs leading-relaxed text-[var(--text-secondary)]">
+                Live Razorpay merchant keys are not configured yet. Choose an outcome below to
+                dispatch a genuine HMAC-SHA256 signed webhook to{' '}
+                <code className="rounded bg-white px-1 py-0.5">/api/webhooks/payments</code> and
+                test order status transitions:
+              </p>
+
+              {paymentMessage && (
+                <p role="alert" className="rounded-lg bg-red-50 p-2.5 text-xs text-red-800">
+                  {paymentMessage}
+                </p>
+              )}
+
+              <div className="grid grid-cols-1 gap-2.5 pt-2 sm:grid-cols-3">
+                <button
+                  type="button"
+                  disabled={paymentBusy}
+                  onClick={() => void handleSandboxOutcome('captured')}
+                  className="flex min-h-[48px] items-center justify-center gap-1.5 rounded-xl bg-[var(--brand-leaf)] px-4 text-xs font-semibold text-white hover:opacity-95 disabled:opacity-60"
+                >
+                  <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
+                  Simulate Paid
+                </button>
+                <button
+                  type="button"
+                  disabled={paymentBusy}
+                  onClick={() => void handleSandboxOutcome('pending')}
+                  className="flex min-h-[48px] items-center justify-center gap-1.5 rounded-xl border border-amber-700 bg-amber-50 px-4 text-xs font-semibold text-amber-950 hover:bg-amber-100 disabled:opacity-60"
+                >
+                  <Clock className="h-4 w-4" aria-hidden="true" />
+                  Simulate Pending
+                </button>
+                <button
+                  type="button"
+                  disabled={paymentBusy}
+                  onClick={() => void handleSandboxOutcome('failed')}
+                  className="flex min-h-[48px] items-center justify-center gap-1.5 rounded-xl border border-red-700 bg-red-50 px-4 text-xs font-semibold text-red-900 hover:bg-red-100 disabled:opacity-60"
+                >
+                  <XCircle className="h-4 w-4" aria-hidden="true" />
+                  Simulate Failed
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="mt-6 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-canvas)] p-5 text-sm">
+              <p>
+                Provider Order ID:{' '}
+                <strong className="font-mono-num">{createdOrder.paymentOrder.providerOrderId}</strong>
+              </p>
+              <p className="mt-1 text-xs text-[var(--text-secondary)]">
+                Complete payment in the hosted Razorpay window; confirmation updates strictly via
+                verified server webhook.
+              </p>
+            </div>
+          )}
+
+          <p className="mt-5 text-xs text-[var(--text-muted)]">
+            Need help? Call or WhatsApp {BRAND.phoneDisplay} with your Order ID{' '}
+            <strong className="font-mono-num">{createdOrder.orderNumber}</strong>.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:py-12">
+      <nav aria-label="Breadcrumb" className="text-xs text-[var(--text-muted)]">
+        <Link href="/cart" className="hover:text-[var(--brand-crimson)]">Shopping Bag</Link>
+        <span className="mx-2">/</span>
+        <span className="font-semibold text-[var(--text-primary)]">Guest Checkout</span>
+      </nav>
+
+      <h1 className="font-display mt-3 text-3xl font-bold text-[var(--text-primary)] sm:text-4xl">
+        Guest Checkout
+      </h1>
+      <p className="mt-1 text-sm text-[var(--text-secondary)]">
+        Fast, account-free checkout. We only collect details needed to dispatch your order from Madurai.
+      </p>
+
+      {cartLoading ? (
+        <div className="mt-8 rounded-2xl bg-[var(--bg-surface)] p-8 text-center text-sm text-[var(--text-muted)]">
+          Loading checkout details...
+        </div>
+      ) : !cart || cart.items.length === 0 ? (
+        <div className="mt-8 rounded-2xl border border-[var(--border-strong)] bg-[var(--bg-surface)] p-8 text-center">
+          <p className="font-display text-xl font-bold">Your shopping bag is empty</p>
+          <p className="mt-2 text-sm text-[var(--text-secondary)]">
+            Add products to your bag before checking out.
+          </p>
+          <Link
+            href="/products"
+            className="mt-5 inline-flex min-h-[44px] items-center rounded-xl bg-[var(--brand-crimson)] px-5 text-sm font-semibold text-white"
+          >
+            Shop All Products
+          </Link>
+        </div>
+      ) : (
+        <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-12">
+          {/* Guest Checkout Form */}
+          <form onSubmit={handleSubmitOrder} noValidate className="space-y-6 lg:col-span-7">
+            {formError && (
+              <div
+                ref={errorSummaryRef}
+                tabIndex={-1}
+                role="alert"
+                className="flex items-start gap-2.5 rounded-2xl border border-red-400 bg-red-50 p-4 text-sm text-red-900"
+              >
+                <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-700" aria-hidden="true" />
+                <div>
+                  <p className="font-bold">{formError}</p>
+                </div>
+              </div>
+            )}
+
+            <section className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-5 sm:p-6">
+              <h2 className="font-display text-lg font-bold text-[var(--text-primary)]">
+                1. Contact Details
+              </h2>
+              <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="sm:col-span-2">
+                  <label htmlFor="chk-name" className="block text-xs font-semibold text-[var(--text-primary)]">
+                    Full Name <span className="text-[var(--brand-crimson)]">*</span>
+                  </label>
+                  <input
+                    id="chk-name"
+                    required
+                    autoComplete="name"
+                    value={customerName}
+                    onChange={(e) => setCustomerName(e.target.value)}
+                    className="mt-1.5 h-11 w-full rounded-xl border border-[var(--border-strong)] bg-[var(--bg-canvas)] px-3.5 text-sm"
+                  />
+                  {fieldErrors.customerName?.[0] && (
+                    <p className="mt-1 text-xs text-red-700">{fieldErrors.customerName[0]}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label htmlFor="chk-phone" className="block text-xs font-semibold text-[var(--text-primary)]">
+                    Indian Mobile Number <span className="text-[var(--brand-crimson)]">*</span>
+                  </label>
+                  <input
+                    id="chk-phone"
+                    type="tel"
+                    required
+                    autoComplete="tel"
+                    placeholder="10-digit mobile number"
+                    value={customerPhone}
+                    onChange={(e) => setCustomerPhone(e.target.value)}
+                    className="mt-1.5 h-11 w-full rounded-xl border border-[var(--border-strong)] bg-[var(--bg-canvas)] px-3.5 text-sm"
+                  />
+                  {fieldErrors.customerPhone?.[0] && (
+                    <p className="mt-1 text-xs text-red-700">{fieldErrors.customerPhone[0]}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label htmlFor="chk-email" className="block text-xs font-semibold text-[var(--text-primary)]">
+                    Email (Optional, for receipt)
+                  </label>
+                  <input
+                    id="chk-email"
+                    type="email"
+                    autoComplete="email"
+                    value={customerEmail}
+                    onChange={(e) => setCustomerEmail(e.target.value)}
+                    className="mt-1.5 h-11 w-full rounded-xl border border-[var(--border-strong)] bg-[var(--bg-canvas)] px-3.5 text-sm"
+                  />
+                  {fieldErrors.customerEmail?.[0] && (
+                    <p className="mt-1 text-xs text-red-700">{fieldErrors.customerEmail[0]}</p>
+                  )}
+                </div>
+              </div>
+            </section>
+
+            <section className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-5 sm:p-6">
+              <h2 className="font-display text-lg font-bold text-[var(--text-primary)]">
+                2. Delivery Address
+              </h2>
+              <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="sm:col-span-2">
+                  <label htmlFor="chk-addr1" className="block text-xs font-semibold text-[var(--text-primary)]">
+                    Door No., Street & Locality <span className="text-[var(--brand-crimson)]">*</span>
+                  </label>
+                  <input
+                    id="chk-addr1"
+                    required
+                    autoComplete="address-line1"
+                    value={shippingAddressLine1}
+                    onChange={(e) => setShippingAddressLine1(e.target.value)}
+                    className="mt-1.5 h-11 w-full rounded-xl border border-[var(--border-strong)] bg-[var(--bg-canvas)] px-3.5 text-sm"
+                  />
+                  {fieldErrors.shippingAddressLine1?.[0] && (
+                    <p className="mt-1 text-xs text-red-700">{fieldErrors.shippingAddressLine1[0]}</p>
+                  )}
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label htmlFor="chk-addr2" className="block text-xs font-semibold text-[var(--text-primary)]">
+                    Landmark (Optional)
+                  </label>
+                  <input
+                    id="chk-addr2"
+                    autoComplete="address-line2"
+                    value={shippingAddressLine2}
+                    onChange={(e) => setShippingAddressLine2(e.target.value)}
+                    className="mt-1.5 h-11 w-full rounded-xl border border-[var(--border-strong)] bg-[var(--bg-canvas)] px-3.5 text-sm"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="chk-city" className="block text-xs font-semibold text-[var(--text-primary)]">
+                    City / Town <span className="text-[var(--brand-crimson)]">*</span>
+                  </label>
+                  <input
+                    id="chk-city"
+                    required
+                    autoComplete="address-level2"
+                    value={shippingCity}
+                    onChange={(e) => setShippingCity(e.target.value)}
+                    className="mt-1.5 h-11 w-full rounded-xl border border-[var(--border-strong)] bg-[var(--bg-canvas)] px-3.5 text-sm"
+                  />
+                  {fieldErrors.shippingCity?.[0] && (
+                    <p className="mt-1 text-xs text-red-700">{fieldErrors.shippingCity[0]}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label htmlFor="chk-state" className="block text-xs font-semibold text-[var(--text-primary)]">
+                    State <span className="text-[var(--brand-crimson)]">*</span>
+                  </label>
+                  <select
+                    id="chk-state"
+                    value={shippingState}
+                    onChange={(e) => setShippingState(e.target.value)}
+                    className="mt-1.5 h-11 w-full rounded-xl border border-[var(--border-strong)] bg-[var(--bg-canvas)] px-3.5 text-sm"
+                  >
+                    {INDIAN_STATES.map((st) => (
+                      <option key={st} value={st}>{st}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label htmlFor="chk-pin" className="block text-xs font-semibold text-[var(--text-primary)]">
+                    6-Digit Pincode <span className="text-[var(--brand-crimson)]">*</span>
+                  </label>
+                  <input
+                    id="chk-pin"
+                    required
+                    inputMode="numeric"
+                    maxLength={6}
+                    placeholder="e.g. 625012"
+                    value={shippingPincode}
+                    onChange={(e) => setShippingPincode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    className="font-mono-num mt-1.5 h-11 w-full rounded-xl border border-[var(--border-strong)] bg-[var(--bg-canvas)] px-3.5 text-sm"
+                  />
+                  {fieldErrors.shippingPincode?.[0] && (
+                    <p className="mt-1 text-xs text-red-700">{fieldErrors.shippingPincode[0]}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label htmlFor="chk-notes" className="block text-xs font-semibold text-[var(--text-primary)]">
+                    Delivery Note (Optional)
+                  </label>
+                  <input
+                    id="chk-notes"
+                    value={deliveryNotes}
+                    onChange={(e) => setDeliveryNotes(e.target.value)}
+                    placeholder="Gate instructions, timing..."
+                    className="mt-1.5 h-11 w-full rounded-xl border border-[var(--border-strong)] bg-[var(--bg-canvas)] px-3.5 text-sm"
+                  />
+                </div>
+              </div>
+            </section>
+
+            <button
+              type="submit"
+              disabled={submitting}
+              className="flex min-h-[52px] w-full items-center justify-center gap-2 rounded-xl bg-[var(--brand-crimson)] px-6 text-base font-semibold text-white shadow-md hover:bg-[var(--brand-crimson-hover)] disabled:opacity-60"
+            >
+              <Lock className="h-4 w-4" aria-hidden="true" />
+              {submitting
+                ? 'Creating Server-Verified Order...'
+                : `Continue to Payment (${formatPaiseToInr(cart.totalPaise)})`}
+            </button>
+
+            <p className="text-xs leading-relaxed text-[var(--text-muted)]">
+              By placing an order, you agree to our{' '}
+              <Link href="/legal/terms" className="underline">Terms</Link>,{' '}
+              <Link href="/legal/shipping" className="underline">Shipping Policy</Link>, and{' '}
+              <Link href="/legal/privacy" className="underline">Privacy Notice</Link>.
+            </p>
+          </form>
+
+          {/* Authoritative Order Summary */}
+          <aside className="rounded-2xl border border-[var(--border-strong)] bg-[var(--bg-surface)] p-5 shadow-xs lg:col-span-5 lg:self-start sm:p-6">
+            <h2 className="font-display text-lg font-bold text-[var(--text-primary)]">
+              Bag Summary ({cart.itemCount} items)
+            </h2>
+            <ul className="mt-4 divide-y divide-[var(--border-subtle)] text-sm">
+              {cart.items.map((it) => (
+                <li key={it.variantId} className="flex justify-between gap-3 py-2.5">
+                  <div>
+                    <p className="font-semibold text-[var(--text-primary)]">{it.productName}</p>
+                    <p className="text-xs text-[var(--text-muted)]">
+                      {it.variantLabel} × {it.quantity}
+                    </p>
+                  </div>
+                  <span className="font-mono-num font-semibold text-[var(--text-primary)]">
+                    {formatPaiseToInr(it.lineTotalPaise)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+
+            <dl className="mt-4 space-y-2 border-t border-[var(--border-subtle)] pt-4 text-sm">
+              <div className="flex justify-between text-[var(--text-secondary)]">
+                <dt>Subtotal</dt>
+                <dd className="font-mono-num font-semibold">{formatPaiseToInr(cart.subtotalPaise)}</dd>
+              </div>
+              <div className="flex justify-between text-[var(--text-secondary)]">
+                <dt>Shipping ({shippingState})</dt>
+                <dd className="font-mono-num font-semibold">
+                  {cart.shippingPaise === 0 ? 'FREE' : formatPaiseToInr(cart.shippingPaise)}
+                </dd>
+              </div>
+              <div className="flex justify-between border-t border-[var(--border-subtle)] pt-2.5 text-base font-bold text-[var(--text-primary)]">
+                <dt>Total Payable</dt>
+                <dd className="font-mono-num">{formatPaiseToInr(cart.totalPaise)}</dd>
+              </div>
+            </dl>
+
+            <div className="mt-5 rounded-xl bg-[var(--bg-canvas)] p-3.5 text-xs text-[var(--text-secondary)]">
+              <p className="flex items-center gap-1.5 font-semibold text-[var(--brand-leaf)]">
+                <ShieldCheck className="h-4 w-4 shrink-0" aria-hidden="true" />
+                Protected Checkout Architecture
+              </p>
+              <p className="mt-1">
+                Prices and stock are re-verified on the server. Card/UPI details are tokenized by
+                our hosted gateway adapter — never stored on our servers.
+              </p>
+            </div>
+
+            <div className="mt-4 border-t border-[var(--border-subtle)] pt-4">
+              <p className="text-xs font-semibold text-[var(--text-primary)]">
+                Prefer to ask before paying?
+              </p>
+              <a
+                href={cart.whatsappEnquiryUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-2 inline-flex min-h-[42px] w-full items-center justify-center gap-1.5 rounded-xl border border-[var(--brand-leaf)] bg-[var(--brand-leaf-soft)] px-4 text-xs font-semibold text-[var(--brand-leaf)]"
+              >
+                <MessageCircle className="h-4 w-4" aria-hidden="true" />
+                Send Cart Summary on WhatsApp
+              </a>
+              <p className="mt-1.5 text-[11px] text-[var(--text-muted)]">
+                WhatsApp enquiry does not confirm an order or payment until our team replies.
+              </p>
+            </div>
+          </aside>
+        </div>
+      )}
+    </div>
+  );
+}

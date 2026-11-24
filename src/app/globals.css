@@ -1,0 +1,263 @@
+@import "tailwindcss";
+
+:root {
+  /* Madurai Aanandha Masala — Unified Packaging-First Colour System */
+  --bg-canvas: #fbf6ee;
+  --bg-sand: #f2e6d3;
+  --bg-surface: #fffdf9;
+  --bg-surface-muted: #efe3cf;
+  --bg-stage: #f4e8d6;
+  --bg-deep: #23130d;
+  --bg-deep-elevated: #311c13;
+
+  --text-primary: #1f120c;
+  --text-secondary: #52392d;
+  --text-muted: #6b4f41;
+  --text-on-deep: #fbf5ec;
+  --text-on-deep-muted: #dccab3;
+
+  --brand-crimson: #9e1b1e;
+  --brand-crimson-hover: #7e1417;
+  --brand-crimson-soft: #fae6e6;
+  --brand-turmeric: #c88a12;
+  --brand-turmeric-bright: #e7b032;
+  --brand-turmeric-soft: #fbf0d2;
+  --brand-leaf: #1c5c33;
+  --brand-leaf-soft: #e2f1e6;
+  --brand-terracotta: #ba4826;
+
+  --border-subtle: #e5d5be;
+  --border-strong: #c8b092;
+
+  --status-success: #1c5c33;
+  --status-warning: #9a5b04;
+  --status-danger: #9e1b1e;
+
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@theme inline {
+  --color-canvas: var(--bg-canvas);
+  --color-sand: var(--bg-sand);
+  --color-surface: var(--bg-surface);
+  --color-surface-muted: var(--bg-surface-muted);
+  --color-deep: var(--bg-deep);
+  --color-ink: var(--text-primary);
+  --color-ink-secondary: var(--text-secondary);
+  --color-ink-muted: var(--text-muted);
+  --color-crimson: var(--brand-crimson);
+  --color-turmeric: var(--brand-turmeric);
+  --color-leaf: var(--brand-leaf);
+  --color-terracotta: var(--brand-terracotta);
+  --color-line: var(--border-subtle);
+  --color-line-strong: var(--border-strong);
+
+  --font-display: var(--font-fraunces), var(--font-noto-tamil), Georgia, serif;
+  --font-sans: var(--font-jakarta), var(--font-noto-tamil), system-ui, -apple-system, sans-serif;
+  --font-tamil: var(--font-noto-tamil), var(--font-jakarta), sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, monospace;
+}
+
+html {
+  scroll-behavior: smooth;
+  background-color: var(--bg-canvas);
+  color: var(--text-primary);
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--bg-canvas);
+  color: var(--text-primary);
+  line-height: 1.6;
+  overflow-x: clip;
+  -webkit-font-smoothing: antialiased;
+}
+
+.font-display {
+  font-family: var(--font-display);
+}
+
+.font-tamil {
+  font-family: var(--font-tamil);
+  line-height: 1.48;
+}
+
+.font-mono-num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Believable physical studio pouch shadows (grounded solid drawing) */
+.pouch-float-dark {
+  filter: drop-shadow(0 26px 32px rgba(8, 3, 1, 0.6))
+    drop-shadow(0 6px 14px rgba(8, 3, 1, 0.36));
+}
+
+.pouch-float-light {
+  filter: drop-shadow(0 18px 22px rgba(45, 24, 12, 0.22))
+    drop-shadow(0 4px 8px rgba(45, 24, 12, 0.14));
+}
+
+/* Subtle Madurai architectural kolam grain & fine editorial grid */
+.bg-kolam-grain {
+  background-image: radial-gradient(rgba(158, 27, 30, 0.05) 1px, transparent 1px),
+    radial-gradient(rgba(200, 138, 18, 0.045) 1px, transparent 1px);
+  background-size: 32px 32px;
+  background-position: 0 0, 16px 16px;
+}
+
+.bg-brass-lattice {
+  background-image: linear-gradient(to right, rgba(231, 176, 50, 0.06) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(231, 176, 50, 0.06) 1px, transparent 1px);
+  background-size: 64px 64px;
+}
+
+/* Accessible focus rings (WCAG 2.2 AA) */
+:focus-visible {
+  outline: 2.5px solid var(--brand-crimson);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0.75rem;
+  z-index: 100;
+  background: var(--bg-deep);
+  color: var(--text-on-deep);
+  padding: 0.75rem 1.25rem;
+  border-radius: 0.5rem;
+  font-weight: 600;
+}
+.skip-link:focus {
+  left: 0.75rem;
+}
+
+/* Touch swipeable rails */
+.snap-rail {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.snap-rail::-webkit-scrollbar {
+  display: none;
+}
+.snap-rail-item {
+  scroll-snap-align: start;
+  flex-shrink: 0;
+}
+
+/* Gentle hero breathing motion */
+@keyframes pouch-breathe {
+  0%,
+  100% {
+    transform: translate3d(0, 0px, 0);
+  }
+  50% {
+    transform: translate3d(0, -9px, 0);
+  }
+}
+
+.animate-pouch-breathe {
+  animation: pouch-breathe 5.8s ease-in-out infinite;
+}
+
+/* Deterministic interruptible hero carousel transitions (zero mode="wait" deadlock) */
+@keyframes hero-pouch-from-right {
+  0% {
+    opacity: 0.25;
+    transform: translate3d(54px, 14px, 0) scale(0.92) rotate(3deg);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1) rotate(0deg);
+  }
+}
+
+@keyframes hero-pouch-from-left {
+  0% {
+    opacity: 0.25;
+    transform: translate3d(-54px, 14px, 0) scale(0.92) rotate(-3deg);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1) rotate(0deg);
+  }
+}
+
+@keyframes hero-copy-reveal {
+  0% {
+    opacity: 0.35;
+    transform: translate3d(0, 12px, 0);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes aanandha-stage-enter {
+  0% {
+    opacity: 0.65;
+    transform: translate3d(0, 10px, 0) scale(0.985);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes heading-line-in {
+  0% {
+    opacity: 0.55;
+    transform: translate3d(0, 10px, 0);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.animate-hero-from-right {
+  animation: hero-pouch-from-right 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-hero-from-left {
+  animation: hero-pouch-from-left 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-hero-copy {
+  animation: hero-copy-reveal 360ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-stage-enter {
+  animation: aanandha-stage-enter 260ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-heading-reveal {
+  animation: heading-line-in 440ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .animate-pouch-breathe,
+  .animate-hero-from-right,
+  .animate-hero-from-left,
+  .animate-hero-copy,
+  .animate-stage-enter,
+  .animate-heading-reveal {
+    animation: none;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
