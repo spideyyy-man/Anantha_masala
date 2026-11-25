@@ -269,10 +269,11 @@ export default function SpiceAtmosphereShader({
       pointerY += (targetPY - pointerY) * 0.04;
 
       const tgt = targetColorsRef.current;
+      // Smooth ~1.35s cinematic atmospheric colour transition matching the hero scene choreography
       for (let i = 0; i < 3; i++) {
-        curBase[i] = (curBase[i] ?? 0) + ((tgt.colorBase[i] ?? 0) - (curBase[i] ?? 0)) * 0.16;
-        curA[i] = (curA[i] ?? 0) + ((tgt.colorA[i] ?? 0) - (curA[i] ?? 0)) * 0.16;
-        curB[i] = (curB[i] ?? 0) + ((tgt.colorB[i] ?? 0) - (curB[i] ?? 0)) * 0.16;
+        curBase[i] = (curBase[i] ?? 0) + ((tgt.colorBase[i] ?? 0) - (curBase[i] ?? 0)) * 0.072;
+        curA[i] = (curA[i] ?? 0) + ((tgt.colorA[i] ?? 0) - (curA[i] ?? 0)) * 0.072;
+        curB[i] = (curB[i] ?? 0) + ((tgt.colorB[i] ?? 0) - (curB[i] ?? 0)) * 0.072;
       }
 
       gl.uniform1f(uTime, t);

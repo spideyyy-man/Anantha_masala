@@ -84,7 +84,36 @@ describe('Catalog Integrity, 35-Image Manifest & Bilingual Discovery', () => {
     expect(noMatches.products).toHaveLength(0);
   });
 
-  it('applies multi-facet filtering and price sorting accurately', async () => {
+  it('handles partial product names, common misspellings, extra spaces, and punctuation accurately', async () => {
+    // Partial product-name searches
+    const partialBhai = await queryCatalog({ q: 'bhai veetu' });
+    expect(partialBhai.products.some((p) => p.slug === 'bhai-veetu-meen-masala')).toBe(true);
+    expect(partialBhai.products.some((p) => p.slug === 'bhai-veetu-kari-masala')).toBe(true);
+
+    // Extra spaces and punctuation normalization
+    const messyQuery = await queryCatalog({ q: '  bhai---veetu...   meen!!  ' });
+    expect(messyQuery.products[0]?.slug).toBe('bhai-veetu-meen-masala');
+
+    // Misspelled / phonetic variations ("turmaric", "kuzhampu", "idly poddi", "ulundu", "chappathi")
+    const misspelledTurmeric = await queryCatalog({ q: 'turmaric' });
+    expect(misspelledTurmeric.products.some((p) => p.slug === 'manjal-podi')).toBe(true);
+
+    const misspelledKuzhambu = await queryCatalog({ q: 'kuzhampu' });
+    expect(misspelledKuzhambu.products.some((p) => p.slug === 'kuzhambu-podi')).toBe(true);
+
+    const misspelledIdli = await queryCatalog({ q: 'idly poddi' });
+    expect(misspelledIdli.products.some((p) => p.slug === 'idli-milagai-podi')).toBe(true);
+
+    const misspelledUlundhu = await queryCatalog({ q: 'ulundu kali' });
+    expect(misspelledUlundhu.products[0]?.slug).toBe('ulundhu-kali-maavu');
+
+    const misspelledChapathi = await queryCatalog({ q: 'chappathi' });
+    expect(misspelledChapathi.products.some((p) => p.slug === 'multigrain-chapathi-maavu')).toBe(
+      true
+    );
+  });
+
+  it('applies multi-facet filtering and price/alphabetical sorting accurately', async () => {
     const filtered = await queryCatalog({
       categories: ['traditional-podi'],
       packSizes: [100],
@@ -98,5 +127,12 @@ describe('Catalog Integrity, 35-Image Manifest & Bilingual Discovery', () => {
     }
     const prices = filtered.products.map((p) => p.minPricePaise ?? 0);
     expect(prices).toEqual([...prices].sort((a, b) => a - b));
+
+    const alpha = await queryCatalog({
+      categories: ['cooking-essentials'],
+      sort: 'name_asc',
+    });
+    const names = alpha.products.map((p) => p.name);
+    expect(names).toEqual([...names].sort((a, b) => a.localeCompare(b)));
   });
 });

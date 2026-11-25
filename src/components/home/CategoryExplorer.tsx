@@ -1,10 +1,17 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { ArrowRight, ArrowUpRight, AlertTriangle, Sparkles } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import {
+  ArrowLeft,
+  ArrowRight,
+  ArrowUpRight,
+  AlertTriangle,
+  Sparkles,
+} from 'lucide-react';
 import type { CatalogCategorySummary, CatalogProduct } from '@/domain/catalog/service';
-import { getCutoutUrlFromThumb } from '@/lib/media';
+import { CATEGORY_THEMES, getCategoryTheme, getCutoutUrlFromThumb } from '@/lib/media';
 import { PouchImage } from '@/components/ui/PouchImage';
 
 interface CategoryExplorerProps {
@@ -12,98 +19,11 @@ interface CategoryExplorerProps {
   allProducts: CatalogProduct[];
 }
 
-interface ExhibitionVisualSpec {
-  surfaceClass: string;
-  stageStyle: React.CSSProperties;
-  darkText: boolean;
-  eyebrow: string;
-  composition: 'trio-wide' | 'crimson-chamber' | 'podi-cascade' | 'courtyard-wide' | 'duo-offset' | 'heirloom-trio' | 'seasonal-atelier' | 'botanical-care';
-}
-
-const EXHIBITION_SPECS: Record<string, ExhibitionVisualSpec> = {
-  'cooking-essentials': {
-    surfaceClass: 'text-[#1F120C] border-[#DFC7A2]',
-    stageStyle: {
-      background:
-        'radial-gradient(circle at 74% 52%, #FFF8EA 0%, #F5E3C2 55%, #EBD3AB 100%)',
-    },
-    darkText: true,
-    eyebrow: '01 • Everyday Hearth',
-    composition: 'trio-wide',
-  },
-  'non-veg-masalas': {
-    surfaceClass: 'text-[#FBF5EC] border-[#5B251D]',
-    stageStyle: {
-      background:
-        'radial-gradient(circle at 52% 40%, rgba(182, 42, 32, 0.56) 0%, rgba(122, 26, 20, 0.45) 45%, #27100C 100%)',
-    },
-    darkText: false,
-    eyebrow: '02 • Madurai Signature',
-    composition: 'crimson-chamber',
-  },
-  'traditional-podi': {
-    surfaceClass: 'text-[#1F120C] border-[#DFC49F]',
-    stageStyle: {
-      background:
-        'radial-gradient(circle at 50% 38%, #FFF7E8 0%, #F5E0BE 62%, #E8CB9F 100%)',
-    },
-    darkText: true,
-    eyebrow: '03 • Morning Tiffin',
-    composition: 'podi-cascade',
-  },
-  'traditional-food-mixes': {
-    surfaceClass: 'text-[#16271C] border-[#C4D8C1]',
-    stageStyle: {
-      background:
-        'radial-gradient(circle at 72% 48%, #F7FBF4 0%, #E3EFE0 58%, #CFE2CA 100%)',
-    },
-    darkText: true,
-    eyebrow: '04 • Ready Tiffin & Mixes',
-    composition: 'courtyard-wide',
-  },
-  'millet-and-flours': {
-    surfaceClass: 'text-[#1F120C] border-[#DAC6AD]',
-    stageStyle: {
-      background:
-        'radial-gradient(circle at 66% 48%, #FDF8F0 0%, #EFE1CE 60%, #E2CEB4 100%)',
-    },
-    darkText: true,
-    eyebrow: '05 • Heritage Milling',
-    composition: 'duo-offset',
-  },
-  'healthy-mixes': {
-    surfaceClass: 'text-[#1F120C] border-[#DBC4BE]',
-    stageStyle: {
-      background:
-        'radial-gradient(circle at 54% 46%, #FCF5F2 0%, #EFE0DB 58%, #E1CBC4 100%)',
-    },
-    darkText: true,
-    eyebrow: '06 • Heirloom Grains',
-    composition: 'heirloom-trio',
-  },
-  pickles: {
-    surfaceClass: 'text-[#1F120C] border-[#DFBFB5]',
-    stageStyle: {
-      background:
-        'radial-gradient(circle at 70% 45%, #FFF4EE 0%, #F5DED5 60%, #E9C7BC 100%)',
-    },
-    darkText: true,
-    eyebrow: '07 • Seasonal Small Batch',
-    composition: 'seasonal-atelier',
-  },
-  'traditional-herbal-care': {
-    surfaceClass: 'text-[#21250E] border-[#CECEAA]',
-    stageStyle: {
-      background:
-        'radial-gradient(circle at 64% 48%, #FAFAE9 0%, #EAEAC9 60%, #DDDDAA 100%)',
-    },
-    darkText: true,
-    eyebrow: '08 • External Bath Care',
-    composition: 'botanical-care',
-  },
-};
-
-function getDistinctShowcasePouches(cat: CatalogCategorySummary, catProducts: CatalogProduct[], max = 3) {
+export function getDistinctShowcasePouches(
+  cat: CatalogCategorySummary,
+  catProducts: CatalogProduct[],
+  max = 3
+) {
   const heroCutout = getCutoutUrlFromThumb(cat.heroImage, '720');
   const results: { src: string; fallback: string; alt: string }[] = [
     { src: heroCutout, fallback: cat.heroImage, alt: `${cat.name} signature pouch` },
@@ -122,15 +42,195 @@ function getDistinctShowcasePouches(cat: CatalogCategorySummary, catProducts: Ca
   return results;
 }
 
+/** Normalize any floating-point phase into [0, total) */
+function wrapPhase(phase: number, total: number): number {
+  if (total <= 0) return 0;
+  return ((phase % total) + total) % total;
+}
+
 /**
- * Part 2.3 — Editorial Art-Directed Collections Exhibition.
- * - Inspired by high-craft jar-product editorial art direction: asymmetric spatial blocks,
- *   oversized layered floating packaging compositions, distinct complementary visual atmospheres,
- *   generous negative space, sculptural typography, and parallax hover depth.
- * - Every collection links directly to its preserved `/categories/[slug]` page.
+ * Shortest continuous circular signed offset in (-N/2, N/2] for seamless infinite
+ * looping without duplicate DOM clones or boundary jumps.
+ */
+function getContinuousCircularOffset(index: number, phase: number, total: number): number {
+  if (total <= 0) return 0;
+  let diff = index - wrapPhase(phase, total);
+  const half = total / 2;
+  if (diff > half) diff -= total;
+  if (diff <= -half) diff += total;
+  return diff;
+}
+
+/** Smooth Hermite interpolation t in [0, 1] */
+function smoothstep01(t: number): number {
+  const c = Math.max(0, Math.min(1, t));
+  return c * c * (3 - 2 * c);
+}
+
+function lerp(a: number, b: number, t: number): number {
+  return a + (b - a) * t;
+}
+
+type ViewportTier = 'mobile' | 'tablet' | 'desktop';
+
+interface SpatialState {
+  x: number;
+  y: number;
+  scale: number;
+  rotateY: number;
+  opacity: number;
+  blur: number;
+  z: number;
+  interactive: boolean;
+}
+
+/**
+ * Evaluates a C1-continuous spatial 3D curve for any floating-point offset `rel`.
+ * Cards beyond |rel| >= 2.85 are completely transparent (opacity: 0) well before
+ * the circular wrap boundary at |rel| = 4.0, guaranteeing zero visible seam or jump.
+ */
+function evaluateContinuousSpatial(rel: number, tier: ViewportTier): SpatialState {
+  // Subtle focal dwell shaping near rel = 0 so the central product commands clear visual presence
+  const absRaw = Math.abs(rel);
+  const sign = rel < 0 ? -1 : 1;
+  const shapedAbs =
+    absRaw < 0.65
+      ? absRaw * (0.76 + 0.24 * (absRaw / 0.65) * (absRaw / 0.65))
+      : absRaw;
+
+  const anchorPoints =
+    tier === 'mobile'
+      ? [
+          { d: 0, x: 0, y: 0, scale: 1.0, rot: 0, op: 1.0, blur: 0 },
+          { d: 1, x: 266, y: 16, scale: 0.85, rot: 8, op: 0.58, blur: 0.5 },
+          { d: 2, x: 465, y: 32, scale: 0.72, rot: 12, op: 0.0, blur: 1.8 },
+          { d: 3, x: 540, y: 40, scale: 0.66, rot: 14, op: 0.0, blur: 2.2 },
+        ]
+      : tier === 'tablet'
+        ? [
+            { d: 0, x: 0, y: 0, scale: 1.0, rot: 0, op: 1.0, blur: 0 },
+            { d: 1, x: 342, y: 18, scale: 0.83, rot: 9, op: 0.74, blur: 0.65 },
+            { d: 2, x: 585, y: 35, scale: 0.67, rot: 14, op: 0.26, blur: 1.6 },
+            { d: 2.85, x: 760, y: 48, scale: 0.56, rot: 16, op: 0.0, blur: 2.5 },
+          ]
+        : [
+            { d: 0, x: 0, y: 0, scale: 1.0, rot: 0, op: 1.0, blur: 0 },
+            { d: 1, x: 426, y: 16, scale: 0.835, rot: 9, op: 0.82, blur: 0.45 },
+            { d: 2, x: 694, y: 34, scale: 0.69, rot: 14, op: 0.54, blur: 1.1 },
+            { d: 2.85, x: 940, y: 50, scale: 0.56, rot: 18, op: 0.0, blur: 2.4 },
+          ];
+
+  let p0 = anchorPoints[0]!;
+  let p1 = anchorPoints[anchorPoints.length - 1]!;
+
+  if (shapedAbs >= p1.d) {
+    return {
+      x: sign * p1.x,
+      y: p1.y,
+      scale: p1.scale,
+      rotateY: -sign * p1.rot,
+      opacity: 0,
+      blur: p1.blur,
+      z: 1,
+      interactive: false,
+    };
+  }
+
+  for (let i = 0; i < anchorPoints.length - 1; i++) {
+    const a = anchorPoints[i]!;
+    const b = anchorPoints[i + 1]!;
+    if (shapedAbs >= a.d && shapedAbs <= b.d) {
+      p0 = a;
+      p1 = b;
+      break;
+    }
+  }
+
+  const span = Math.max(0.0001, p1.d - p0.d);
+  const t = smoothstep01((shapedAbs - p0.d) / span);
+
+  const x = sign * lerp(p0.x, p1.x, t);
+  const y = lerp(p0.y, p1.y, t);
+  const scale = lerp(p0.scale, p1.scale, t);
+  const rotateY = -sign * lerp(p0.rot, p1.rot, t);
+  const opacity = lerp(p0.op, p1.op, t);
+  const blur = lerp(p0.blur, p1.blur, t);
+  const z = Math.max(1, Math.round(40 - shapedAbs * 12));
+  const interactive = opacity > 0.18 && shapedAbs < (tier === 'mobile' ? 1.45 : 2.35);
+
+  return { x, y, scale, rotateY, opacity, blur, z, interactive };
+}
+
+/** Discrete semantic slot attribute for accessibility & deterministic DOM querying */
+function getDiscreteSlotLabel(rel: number): string {
+  const rounded = Math.round(rel);
+  if (rounded === 0) return 'center';
+  if (rounded === -1) return 'left-1';
+  if (rounded === 1) return 'right-1';
+  if (rounded === -2) return 'left-2';
+  if (rounded === 2) return 'right-2';
+  return rounded < 0 ? 'far-left' : 'far-right';
+}
+
+const BASE_SPEED_CARDS_PER_SEC = 0.72; // Continuous movement: ~1.39s per card, ~11.1s per full 8-card loop
+const INTERACTION_PAUSE_SEC = 1.4;
+
+const COLLECTION_SHORT_TAB_LABELS: Record<string, string> = {
+  'cooking-essentials': 'Cooking Essentials',
+  'non-veg-masalas': 'Non-Veg Masalas',
+  'traditional-podi': 'Traditional Podi',
+  'traditional-food-mixes': 'Food Mixes',
+  'millet-and-flours': 'Millet & Flours',
+  'healthy-mixes': 'Healthy Mixes',
+  pickles: 'Pickles',
+  'traditional-herbal-care': 'Herbal Care',
+};
+
+export const ACTIVE_COLLECTION_STORAGE_KEY = 'aanandha_active_collection_slug';
+
+/**
+ * Continuous Infinite Spatial Collection Shelf with Connected Shared-Element Transitions.
+ * - Moves continuously by default with zero Auto/Pause/Play UI clutter.
+ * - Uses a floating-point circular ring in requestAnimationFrame so cards glide seamlessly
+ *   across infinite loops with zero boundary jump, reset, or blank space.
+ * - Supports direct pointer/touch dragging, smooth hover slowdown, and connected expansion
+ *   transitions into `/categories/[slug]`.
  */
 export function CategoryExplorer({ categories, allProducts }: CategoryExplorerProps) {
-  const bySlug = useMemo(() => new Map(categories.map((c) => [c.slug, c])), [categories]);
+  const router = useRouter();
+  const total = categories.length;
+
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [tier, setTier] = useState<ViewportTier>('desktop');
+  const [isDraggingUI, setIsDraggingUI] = useState(false);
+  const [launchingSlug, setLaunchingSlug] = useState<string | null>(null);
+
+  const sectionRef = useRef<HTMLElement>(null);
+  const stageRef = useRef<HTMLDivElement>(null);
+  const cardElsRef = useRef<(HTMLElement | null)[]>([]);
+
+  // Continuous floating-point motion state
+  const phaseRef = useRef<number>(0);
+  const unwrappedDistanceRef = useRef<number>(0);
+  const activeIndexRef = useRef<number>(0);
+  const speedFactorRef = useRef<number>(1);
+  const dragVelocityRef = useRef<number>(0);
+  const targetPhaseRef = useRef<number | null>(null);
+  const pauseTimerSecRef = useRef<number>(0);
+
+  // Interaction refs
+  const inViewRef = useRef<boolean>(true);
+  const stageHoveredRef = useRef<boolean>(false);
+  const cardHoveredRef = useRef<boolean>(false);
+  const draggingRef = useRef<boolean>(false);
+  const dragStartXRef = useRef<number>(0);
+  const dragStartYRef = useRef<number>(0);
+  const dragStartPhaseRef = useRef<number>(0);
+  const lastDragXRef = useRef<number>(0);
+  const lastDragTsRef = useRef<number>(0);
+  const movedDuringDragRef = useRef<boolean>(false);
+  const reducedMotionRef = useRef<boolean>(false);
+  const tierRef = useRef<ViewportTier>('desktop');
 
   const productsByCat = useMemo(() => {
     const map = new Map<string, CatalogProduct[]>();
@@ -143,649 +243,866 @@ export function CategoryExplorer({ categories, allProducts }: CategoryExplorerPr
     return map;
   }, [categories, allProducts]);
 
-  const cooking = bySlug.get('cooking-essentials');
-  const nonVeg = bySlug.get('non-veg-masalas');
-  const podi = bySlug.get('traditional-podi');
-  const foodMixes = bySlug.get('traditional-food-mixes');
-  const millets = bySlug.get('millet-and-flours');
-  const healthy = bySlug.get('healthy-mixes');
-  const pickles = bySlug.get('pickles');
-  const herbal = bySlug.get('traditional-herbal-care');
+  // Apply continuous 60fps spatial transforms directly to card DOM nodes
+  const applySpatialFrame = useCallback(() => {
+    if (total === 0) return;
+    const currentPhase = wrapPhase(phaseRef.current, total);
+    const currentTier = tierRef.current;
 
-  const getPouches = (cat?: CatalogCategorySummary, max = 3) =>
-    cat ? getDistinctShowcasePouches(cat, productsByCat.get(cat.slug) ?? [], max) : [];
+    // Update section telemetry attributes for deterministic loop & phase verification
+    if (sectionRef.current) {
+      const completedLoops = Math.floor(Math.abs(unwrappedDistanceRef.current) / total);
+      sectionRef.current.setAttribute('data-collections-phase', currentPhase.toFixed(3));
+      sectionRef.current.setAttribute(
+        'data-collections-unwrapped',
+        unwrappedDistanceRef.current.toFixed(3)
+      );
+      sectionRef.current.setAttribute('data-collections-loops', String(completedLoops));
+    }
+
+    let closestIdx = 0;
+    let closestDist = Infinity;
+
+    for (let idx = 0; idx < total; idx++) {
+      const rel = getContinuousCircularOffset(idx, currentPhase, total);
+      const absRel = Math.abs(rel);
+      if (absRel < closestDist) {
+        closestDist = absRel;
+        closestIdx = idx;
+      }
+
+      const el = cardElsRef.current[idx];
+      if (!el) continue;
+
+      const spatial = evaluateContinuousSpatial(rel, currentTier);
+      el.style.transform = `translate3d(calc(-50% + ${spatial.x.toFixed(2)}px), ${spatial.y.toFixed(2)}px, 0) scale(${spatial.scale.toFixed(4)}) rotateY(${spatial.rotateY.toFixed(2)}deg)`;
+      el.style.opacity = spatial.opacity.toFixed(3);
+      el.style.filter = spatial.blur > 0.08 ? `blur(${spatial.blur.toFixed(2)}px)` : 'none';
+      el.style.zIndex = String(spatial.z);
+      el.style.pointerEvents = spatial.interactive ? 'auto' : 'none';
+      el.setAttribute('data-carousel-pos', getDiscreteSlotLabel(rel));
+      el.setAttribute('data-carousel-rel', rel.toFixed(3));
+    }
+
+    if (closestIdx !== activeIndexRef.current) {
+      activeIndexRef.current = closestIdx;
+      setActiveIndex(closestIdx);
+    }
+  }, [total]);
+
+  // Restore last visited collection on return navigation & prefetch all category routes
+  useEffect(() => {
+    if (total === 0) return;
+    categories.forEach((cat) => {
+      router.prefetch(`/categories/${cat.slug}`);
+    });
+
+    try {
+      const savedSlug = window.sessionStorage.getItem(ACTIVE_COLLECTION_STORAGE_KEY);
+      if (savedSlug) {
+        const savedIdx = categories.findIndex((c) => c.slug === savedSlug);
+        if (savedIdx >= 0) {
+          phaseRef.current = savedIdx;
+          activeIndexRef.current = savedIdx;
+          setActiveIndex(savedIdx);
+        }
+      }
+    } catch {
+      // Ignore storage access restrictions
+    }
+    applySpatialFrame();
+  }, [categories, total, router, applySpatialFrame]);
+
+  // Responsive tier detection & prefers-reduced-motion listener
+  useEffect(() => {
+    const updateTier = () => {
+      const w = window.innerWidth;
+      const nextTier: ViewportTier = w < 768 ? 'mobile' : w < 1100 ? 'tablet' : 'desktop';
+      tierRef.current = nextTier;
+      setTier(nextTier);
+      applySpatialFrame();
+    };
+    updateTier();
+    window.addEventListener('resize', updateTier, { passive: true });
+
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    reducedMotionRef.current = mq.matches;
+    const onMq = (e: MediaQueryListEvent) => {
+      reducedMotionRef.current = e.matches;
+    };
+    mq.addEventListener('change', onMq);
+
+    return () => {
+      window.removeEventListener('resize', updateTier);
+      mq.removeEventListener('change', onMq);
+    };
+  }, [applySpatialFrame]);
+
+  // Single clean requestAnimationFrame loop with IntersectionObserver lifecycle cleanup
+  useEffect(() => {
+    if (total <= 1) return;
+
+    let rafId = 0;
+    let lastTs = performance.now();
+
+    const tick = (now: number) => {
+      if (!inViewRef.current) {
+        rafId = 0;
+        return;
+      }
+      rafId = requestAnimationFrame(tick);
+
+      const dt = Math.min(0.05, Math.max(0.001, (now - lastTs) / 1000));
+      lastTs = now;
+
+      if (pauseTimerSecRef.current > 0) {
+        pauseTimerSecRef.current = Math.max(0, pauseTimerSecRef.current - dt);
+      }
+
+      if (draggingRef.current) {
+        speedFactorRef.current = 0;
+        applySpatialFrame();
+        return;
+      }
+
+      // Smoothly glide to an explicit target index when user clicks a side card, pill, or arrow
+      if (targetPhaseRef.current !== null) {
+        const current = wrapPhase(phaseRef.current, total);
+        const diff = getContinuousCircularOffset(targetPhaseRef.current, current, total);
+        if (Math.abs(diff) < 0.006) {
+          phaseRef.current = wrapPhase(targetPhaseRef.current, total);
+          targetPhaseRef.current = null;
+        } else {
+          // 280ms responsive card-state convergence
+          const stepDelta = diff * Math.min(1, dt * 11.5);
+          phaseRef.current = wrapPhase(current + stepDelta, total);
+          unwrappedDistanceRef.current += Math.abs(stepDelta);
+        }
+        applySpatialFrame();
+        return;
+      }
+
+      // Decay any post-drag release momentum smoothly into continuous motion
+      if (Math.abs(dragVelocityRef.current) > 0.015) {
+        const vDelta = dragVelocityRef.current * dt;
+        phaseRef.current = wrapPhase(phaseRef.current + vDelta, total);
+        unwrappedDistanceRef.current += Math.abs(vDelta);
+        dragVelocityRef.current *= Math.exp(-dt * 6.5);
+      } else {
+        dragVelocityRef.current = 0;
+      }
+
+      // Determine target automatic speed factor (pauses on direct card hover, slows on stage hover)
+      const desiredFactor =
+        reducedMotionRef.current || document.hidden || pauseTimerSecRef.current > 0
+          ? 0
+          : cardHoveredRef.current
+            ? 0
+            : stageHoveredRef.current
+              ? 0.22
+              : 1;
+
+      speedFactorRef.current +=
+        (desiredFactor - speedFactorRef.current) * Math.min(1, dt * 6.5);
+
+      if (speedFactorRef.current > 0.002) {
+        const autoDelta = BASE_SPEED_CARDS_PER_SEC * speedFactorRef.current * dt;
+        phaseRef.current = wrapPhase(phaseRef.current + autoDelta, total);
+        unwrappedDistanceRef.current += autoDelta;
+      }
+
+      applySpatialFrame();
+    };
+
+    const startLoop = () => {
+      if (rafId === 0 && inViewRef.current) {
+        lastTs = performance.now();
+        rafId = requestAnimationFrame(tick);
+      }
+    };
+
+    const io = new IntersectionObserver(
+      (entries) => {
+        const visible = Boolean(entries[0]?.isIntersecting);
+        inViewRef.current = visible;
+        if (visible) {
+          startLoop();
+        } else if (rafId !== 0) {
+          cancelAnimationFrame(rafId);
+          rafId = 0;
+        }
+      },
+      { threshold: 0.08, rootMargin: '120px 0px' }
+    );
+
+    if (sectionRef.current) {
+      io.observe(sectionRef.current);
+    }
+    startLoop();
+
+    return () => {
+      if (rafId !== 0) cancelAnimationFrame(rafId);
+      io.disconnect();
+    };
+  }, [total, applySpatialFrame]);
+
+  // Smoothly glide a specific collection card to exact focal center (280ms convergence)
+  const focusCollectionIndex = useCallback(
+    (targetIdx: number) => {
+      if (total === 0) return;
+      const norm = ((targetIdx % total) + total) % total;
+      targetPhaseRef.current = norm;
+      dragVelocityRef.current = 0;
+      pauseTimerSecRef.current = INTERACTION_PAUSE_SEC;
+      activeIndexRef.current = norm;
+      setActiveIndex(norm);
+    },
+    [total]
+  );
+
+  const handleNext = useCallback(() => {
+    const base = targetPhaseRef.current ?? Math.round(phaseRef.current);
+    focusCollectionIndex(base + 1);
+  }, [focusCollectionIndex]);
+
+  const handlePrev = useCallback(() => {
+    const base = targetPhaseRef.current ?? Math.round(phaseRef.current);
+    focusCollectionIndex(base - 1);
+  }, [focusCollectionIndex]);
+
+  // Connected shared-element navigation into `/categories/[slug]`
+  const navigateToCollectionConnected = useCallback(
+    (cat: CatalogCategorySummary, e?: React.MouseEvent) => {
+      if (movedDuringDragRef.current) {
+        e?.preventDefault();
+        return;
+      }
+      e?.preventDefault();
+
+      try {
+        window.sessionStorage.setItem(ACTIVE_COLLECTION_STORAGE_KEY, cat.slug);
+      } catch {
+        // Ignore storage error
+      }
+
+      setLaunchingSlug(cat.slug);
+      const destination = `/categories/${cat.slug}`;
+
+      const docWithVt = document as Document & {
+        startViewTransition?: (cb: () => void) => void;
+      };
+
+      window.setTimeout(() => {
+        if (
+          typeof docWithVt.startViewTransition === 'function' &&
+          !reducedMotionRef.current
+        ) {
+          docWithVt.startViewTransition(() => {
+            router.push(destination);
+          });
+        } else {
+          router.push(destination);
+        }
+      }, 170);
+    },
+    [router]
+  );
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLElement>) => {
+    if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      handleNext();
+    } else if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      handlePrev();
+    }
+  };
+
+  // Unified pointer dragging (mouse + touch) that never breaks continuous movement
+  const dragPxPerCard = tier === 'mobile' ? 230 : tier === 'tablet' ? 310 : 380;
+
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.button !== 0 && e.pointerType === 'mouse') return;
+    draggingRef.current = true;
+    movedDuringDragRef.current = false;
+    targetPhaseRef.current = null;
+    dragVelocityRef.current = 0;
+    dragStartXRef.current = e.clientX;
+    dragStartYRef.current = e.clientY;
+    dragStartPhaseRef.current = phaseRef.current;
+    lastDragXRef.current = e.clientX;
+    lastDragTsRef.current = performance.now();
+    setIsDraggingUI(true);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!draggingRef.current) return;
+    const dx = e.clientX - dragStartXRef.current;
+    const dy = e.clientY - dragStartYRef.current;
+
+    // Allow vertical page scroll on touch if gesture is primarily vertical
+    if (
+      e.pointerType !== 'mouse' &&
+      Math.abs(dy) > Math.abs(dx) + 8 &&
+      !movedDuringDragRef.current
+    ) {
+      draggingRef.current = false;
+      setIsDraggingUI(false);
+      return;
+    }
+
+    if (Math.abs(dx) > 6) {
+      movedDuringDragRef.current = true;
+    }
+
+    const now = performance.now();
+    const dtMs = Math.max(8, now - lastDragTsRef.current);
+    const stepDx = e.clientX - lastDragXRef.current;
+    const instVelCardsPerSec = (-stepDx / dragPxPerCard) / (dtMs / 1000);
+    dragVelocityRef.current = lerp(dragVelocityRef.current, instVelCardsPerSec, 0.45);
+
+    lastDragXRef.current = e.clientX;
+    lastDragTsRef.current = now;
+
+    const deltaCards = -dx / dragPxPerCard;
+    const prevPhase = phaseRef.current;
+    phaseRef.current = wrapPhase(dragStartPhaseRef.current + deltaCards, total);
+    unwrappedDistanceRef.current += Math.abs(
+      getContinuousCircularOffset(phaseRef.current, prevPhase, total)
+    );
+    applySpatialFrame();
+  };
+
+  const endPointerDrag = () => {
+    if (!draggingRef.current) return;
+    draggingRef.current = false;
+    setIsDraggingUI(false);
+    if (movedDuringDragRef.current) {
+      pauseTimerSecRef.current = 0.45;
+      window.setTimeout(() => {
+        movedDuringDragRef.current = false;
+      }, 80);
+    }
+  };
+
+  if (total === 0) return null;
+
+  const cardWidthPx = tier === 'mobile' ? 304 : tier === 'tablet' ? 450 : 540;
+  const stageHeightPx = tier === 'mobile' ? 455 : tier === 'tablet' ? 470 : 485;
+  const activeCategory = categories[activeIndex] ?? categories[0]!;
+  const launchingCategory = launchingSlug
+    ? categories.find((c) => c.slug === launchingSlug) ?? null
+    : null;
+  const launchingTheme = launchingCategory
+    ? getCategoryTheme(launchingCategory.slug)
+    : null;
 
   return (
     <section
+      id="collections-shelf"
+      ref={sectionRef}
+      role="region"
+      aria-roledescription="carousel"
       aria-labelledby="category-explorer-heading"
-      className="relative overflow-hidden border-b border-[var(--border-subtle)] bg-[#F4EAD9] py-16 text-[var(--text-primary)] lg:py-24"
+      data-collections-carousel="true"
+      data-collections-motion="continuous-infinite"
+      data-collections-active-index={activeIndex}
+      data-collections-active-slug={activeCategory.slug}
+      data-connected-transition-active={launchingSlug ? 'true' : 'false'}
+      tabIndex={0}
+      onKeyDown={handleKeyDown}
+      className="relative overflow-hidden bg-gradient-to-b from-[#F9F1E4] via-[#F4EAD9] to-[#FBF6EE] py-16 text-[var(--text-primary)] focus:outline-none lg:py-22"
     >
+      {/* Subtle Top Architectural Chapter Bridge From Hero */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none mx-auto mb-8 flex max-w-7xl items-center gap-4 px-4 sm:px-6"
+      >
+        <span className="h-px flex-1 bg-gradient-to-r from-transparent via-[var(--border-strong)] to-[var(--border-subtle)]" />
+        <span className="font-tamil text-xs font-bold tracking-wide text-[var(--brand-crimson)]/85">
+          அத்தியாயம் 01 • மதுரை சமையல் பிரிவுகள்
+        </span>
+        <span className="h-px flex-1 bg-gradient-to-l from-transparent via-[var(--border-strong)] to-[var(--border-subtle)]" />
+      </div>
+
+      {/* Header Row — Clean Editorial Controls Without Auto/Pause/Play Clutter */}
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
-        {/* Sculptural Editorial Exhibition Header */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div className="max-w-2xl">
             <p className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--brand-crimson)]">
-              Curated Collections • Eight Pantry Chapters
+              Chapter 01 • Curated Collections • Eight Pantry Chapters
             </p>
             <h2
               id="category-explorer-heading"
-              className="font-display mt-2.5 text-3xl font-bold leading-[1.06] tracking-[-0.02em] text-[var(--text-primary)] sm:text-5xl"
+              className="font-display mt-2 text-3xl font-bold leading-[1.06] tracking-[-0.02em] text-[var(--text-primary)] sm:text-5xl"
             >
               Every Shelf of the Madurai Kitchen.
             </h2>
+            <p className="mt-2.5 max-w-xl text-sm leading-relaxed text-[var(--text-secondary)]">
+              From daily sambar and Bhai Veetu non-veg masalas to roasted breakfast idli podis and
+              eight-grain heirloom mixes — explore our pantry by how Madurai cooks.
+            </p>
           </div>
-          <Link
-            href="/categories"
-            className="inline-flex min-h-[44px] items-center gap-2 self-start rounded-full border border-[var(--border-strong)] bg-[var(--bg-surface)] px-5 text-xs font-bold text-[var(--text-primary)] transition-colors hover:border-[var(--brand-crimson)] hover:text-[var(--brand-crimson)] sm:self-auto"
-          >
-            Browse All 8 Collections
-            <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
-          </Link>
-        </div>
 
-        {/* =================================================================
-            EXHIBITION ROW 1 — Flagship Asymmetric Duet (7 cols + 5 cols)
-            ================================================================= */}
-        <div className="mt-10 grid grid-cols-1 gap-6 lg:grid-cols-12">
-          {/* 01: Cooking Essentials & Traditional Masalas (7 cols, expansive sunlit saffron pavilion) */}
-          {cooking && (() => {
-            const spec = EXHIBITION_SPECS[cooking.slug]!;
-            const pouches = getPouches(cooking, 3);
-            return (
-              <Link
-                href={`/categories/${cooking.slug}`}
-                style={spec.stageStyle}
-                className={`group relative flex min-h-[390px] flex-col justify-between overflow-hidden rounded-[32px] border p-6 shadow-sm transition-shadow duration-500 hover:shadow-xl sm:min-h-[430px] sm:p-9 lg:col-span-7 ${spec.surfaceClass}`}
+          <div className="flex flex-wrap items-center gap-2.5">
+            <span className="font-mono-num mr-1 text-xs font-bold text-[var(--text-secondary)]">
+              0{activeIndex + 1} / 0{total}
+            </span>
+            <button
+              type="button"
+              onClick={handlePrev}
+              aria-label="Previous collection"
+              className="flex h-11 w-11 items-center justify-center rounded-full border border-[var(--border-strong)] bg-[var(--bg-surface)] text-[var(--text-primary)] shadow-xs transition-all duration-[180ms] hover:scale-105 hover:border-[var(--brand-crimson)] hover:bg-[var(--brand-crimson)] hover:text-white active:scale-95"
+            >
+              <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              onClick={handleNext}
+              aria-label="Next collection"
+              className="flex h-11 w-11 items-center justify-center rounded-full border border-[var(--border-strong)] bg-[var(--bg-surface)] text-[var(--text-primary)] shadow-xs transition-all duration-[180ms] hover:scale-105 hover:border-[var(--brand-crimson)] hover:bg-[var(--brand-crimson)] hover:text-white active:scale-95"
+            >
+              <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            </button>
+            <Link
+              href="/categories"
+              className="inline-flex min-h-[44px] items-center gap-1.5 rounded-full bg-[var(--bg-deep)] px-4.5 text-xs font-bold text-[#FBF5EC] transition-all duration-[180ms] hover:bg-[var(--brand-crimson)]"
+            >
+              All 8 Collections
+              <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      {/* =====================================================================
+          CONTINUOUS INFINITE CENTRE-FOCUSED SPATIAL SHELF
+          [ Far Left ] [ Left Neighbour ] [ MAIN FOCUS ] [ Right Neighbour ] [ Far Right ]
+          ===================================================================== */}
+      <div
+        ref={stageRef}
+        onMouseEnter={() => {
+          stageHoveredRef.current = true;
+        }}
+        onMouseLeave={() => {
+          stageHoveredRef.current = false;
+          cardHoveredRef.current = false;
+          endPointerDrag();
+        }}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={endPointerDrag}
+        onPointerCancel={endPointerDrag}
+        onClickCapture={(e) => {
+          if (movedDuringDragRef.current) {
+            e.preventDefault();
+            e.stopPropagation();
+          }
+        }}
+        style={{ height: `${stageHeightPx}px`, perspective: '1400px' }}
+        className={`relative mt-9 w-full touch-pan-y select-none overflow-hidden ${
+          isDraggingUI ? 'cursor-grabbing' : 'cursor-grab'
+        }`}
+      >
+        {/* Subtle left/right spatial fade vignettes framing the distant cards */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-y-0 left-0 z-40 hidden w-12 bg-gradient-to-r from-[#F4EAD9] via-[#F4EAD9]/55 to-transparent lg:block xl:w-20"
+        />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-y-0 right-0 z-40 hidden w-12 bg-gradient-to-l from-[#F4EAD9] via-[#F4EAD9]/55 to-transparent lg:block xl:w-20"
+        />
+
+        {/* Flanking Stage Arrows for Direct Spatial Browsing on Wide Desktop */}
+        <button
+          type="button"
+          onClick={handlePrev}
+          aria-label="Shift previous collection into centre focus"
+          className="absolute left-5 top-1/2 z-40 hidden h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full border border-[var(--border-strong)] bg-[var(--bg-surface)]/95 text-[var(--text-primary)] shadow-lg backdrop-blur-md transition-all duration-[180ms] hover:scale-105 hover:border-[var(--brand-crimson)] hover:bg-[var(--brand-crimson)] hover:text-white active:scale-95 xl:flex"
+        >
+          <ArrowLeft className="h-5 w-5" aria-hidden="true" />
+        </button>
+        <button
+          type="button"
+          onClick={handleNext}
+          aria-label="Shift next collection into centre focus"
+          className="absolute right-5 top-1/2 z-40 hidden h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full border border-[var(--border-strong)] bg-[var(--bg-surface)]/95 text-[var(--text-primary)] shadow-lg backdrop-blur-md transition-all duration-[180ms] hover:scale-105 hover:border-[var(--brand-crimson)] hover:bg-[var(--brand-crimson)] hover:text-white active:scale-95 xl:flex"
+        >
+          <ArrowRight className="h-5 w-5" aria-hidden="true" />
+        </button>
+
+        {/* Circular Spatial Cards — Preserving Each Collection's Signature Art Direction */}
+        {categories.map((cat, idx) => {
+          const initialRel = getContinuousCircularOffset(idx, phaseRef.current, total);
+          const initialSpatial = evaluateContinuousSpatial(initialRel, tier);
+          const isCenter = idx === activeIndex;
+          const isLaunching = launchingSlug === cat.slug;
+
+          const spec =
+            CATEGORY_THEMES[cat.slug] ?? CATEGORY_THEMES['cooking-essentials']!;
+          const catProducts = productsByCat.get(cat.slug) ?? [];
+          const pouches = getDistinctShowcasePouches(
+            cat,
+            catProducts,
+            cat.isComingSoonOnly ? 0 : 3
+          );
+
+          const cardStyle: React.CSSProperties = {
+            background: spec.stageBg,
+            width: `${cardWidthPx}px`,
+            height: `${stageHeightPx - 36}px`,
+            transform: `translate3d(calc(-50% + ${initialSpatial.x.toFixed(2)}px), ${initialSpatial.y.toFixed(2)}px, 0) scale(${initialSpatial.scale.toFixed(4)}) rotateY(${initialSpatial.rotateY.toFixed(2)}deg)`,
+            opacity: initialSpatial.opacity,
+            filter: initialSpatial.blur > 0.08 ? `blur(${initialSpatial.blur.toFixed(2)}px)` : 'none',
+            zIndex: initialSpatial.z,
+            pointerEvents: initialSpatial.interactive ? 'auto' : 'none',
+            willChange: 'transform, opacity',
+            viewTransitionName: isCenter ? `collection-stage-${cat.slug}` : undefined,
+          };
+
+          return (
+            <Link
+              key={cat.id}
+              ref={(el) => {
+                cardElsRef.current[idx] = el;
+              }}
+              href={`/categories/${cat.slug}`}
+              draggable={false}
+              data-collection-card={cat.slug}
+              data-carousel-pos={getDiscreteSlotLabel(initialRel)}
+              data-carousel-focal={isCenter ? 'true' : 'false'}
+              aria-label={
+                isCenter
+                  ? `Explore ${cat.name} collection`
+                  : `Bring ${cat.name} into centre focus`
+              }
+              onMouseEnter={() => {
+                cardHoveredRef.current = true;
+              }}
+              onMouseLeave={() => {
+                cardHoveredRef.current = false;
+              }}
+              onClick={(e) => {
+                if (movedDuringDragRef.current) {
+                  e.preventDefault();
+                  return;
+                }
+                const liveRel = getContinuousCircularOffset(idx, phaseRef.current, total);
+                // Side cards glide smoothly into centre focus; central focal card launches connected page transition
+                if (Math.abs(liveRel) >= 0.45 && idx !== activeIndexRef.current) {
+                  e.preventDefault();
+                  focusCollectionIndex(idx);
+                } else {
+                  navigateToCollectionConnected(cat, e);
+                }
+              }}
+              style={cardStyle}
+              className={`group absolute left-1/2 top-3 flex flex-col justify-between overflow-hidden rounded-[32px] border p-5 text-left transition-[box-shadow,border-color] duration-[300ms] ease-out sm:p-7 ${
+                spec.surfaceClass
+              } ${
+                isCenter
+                  ? 'shadow-[0_28px_60px_-15px_rgba(31,18,12,0.32)] ring-2 ring-[var(--brand-crimson)]/30'
+                  : 'shadow-md hover:shadow-xl'
+              } ${isLaunching ? 'scale-[1.03] ring-4 ring-[var(--brand-crimson)]/45' : ''}`}
+            >
+              {/* Subtle Architectural Watermark Number */}
+              <span
+                aria-hidden="true"
+                className={`font-display pointer-events-none absolute -right-3 -top-6 select-none text-[8.5rem] font-bold leading-none transition-transform duration-[300ms] ${
+                  spec.darkSurface ? 'text-[#F7CE68]/[0.07]' : 'text-[#9E1B1E]/[0.055]'
+                } ${isCenter ? 'scale-105' : 'scale-95'}`}
               >
-                {/* Decorative giant watermark number */}
-                <span
+                {spec.watermarkNum}
+              </span>
+
+              {/* Dark Chamber Glow (Non-Veg Masalas) */}
+              {spec.darkSurface && (
+                <div
                   aria-hidden="true"
-                  className="font-display pointer-events-none absolute -right-4 -top-8 select-none text-[11rem] font-bold leading-none text-[#9E1B1E]/[0.06]"
+                  className={`pointer-events-none absolute left-1/2 top-[44%] h-52 w-52 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#F7CE68]/35 blur-3xl transition-opacity duration-[320ms] ${
+                    isCenter ? 'opacity-100' : 'opacity-65'
+                  }`}
+                />
+              )}
+
+              {/* Subtle Temple Arch Hairline (Traditional Podi) */}
+              {cat.slug === 'traditional-podi' && (
+                <div
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-x-12 top-12 bottom-28 rounded-t-full border border-[#B97A2E]/22"
+                />
+              )}
+
+              {/* Top Eyebrow & Count Pill (Text transition: 210ms) */}
+              <div className="relative z-20 flex items-center justify-between gap-2 transition-opacity duration-[210ms] ease-out">
+                <span
+                  className={`inline-flex min-w-0 items-center gap-1.5 text-[11px] font-bold uppercase leading-snug tracking-[0.16em] ${spec.accentTextClass}`}
                 >
-                  01
+                  {cat.isComingSoonOnly && (
+                    <Sparkles className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                  )}
+                  <span className="truncate">{spec.eyebrow}</span>
                 </span>
 
-                <div className="relative z-20 flex items-center justify-between gap-2">
-                  <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-[var(--brand-crimson)]">
-                    {spec.eyebrow}
+                {!cat.isEdibleCategory ? (
+                  <span className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full bg-amber-900 px-2.5 py-0.5 text-[10px] font-bold text-amber-50">
+                    <AlertTriangle className="h-3 w-3 shrink-0" aria-hidden="true" />
+                    External Only
                   </span>
-                  <span className="font-mono-num rounded-full bg-white/85 px-3 py-1 text-xs font-bold text-[var(--text-primary)] shadow-xs">
-                    {cooking.productCount} Packs
+                ) : cat.isComingSoonOnly ? (
+                  <span className="shrink-0 whitespace-nowrap rounded-full bg-amber-100 px-2.5 py-0.5 text-[11px] font-bold text-amber-950">
+                    Seasonal • WA
                   </span>
-                </div>
+                ) : (
+                  <span
+                    className={`font-mono-num shrink-0 whitespace-nowrap rounded-full px-3 py-1 text-xs font-bold transition-transform duration-[220ms] ${
+                      spec.darkSurface
+                        ? 'border border-white/20 bg-white/10 text-[#FBF5EC]'
+                        : 'bg-white/85 text-[var(--text-primary)] shadow-xs'
+                    } ${isCenter ? 'scale-100' : 'scale-95 opacity-85'}`}
+                  >
+                    {cat.productCount} {spec.badgeSuffix}
+                  </span>
+                )}
+              </div>
 
-                {/* Editorial Split: Left Title + Right Oversized 3-Pouch Floating Composition */}
-                <div className="relative z-10 my-4 grid grid-cols-1 items-center gap-6 sm:grid-cols-12">
-                  <div className="sm:col-span-6">
-                    <p className="font-tamil text-sm font-bold text-[var(--brand-crimson)]">
-                      {cooking.tamilName}
-                    </p>
-                    <h3 className="font-display mt-1.5 text-3xl font-bold leading-[1.08] tracking-[-0.02em] sm:text-[2.15rem]">
-                      {cooking.name}
-                    </h3>
-                    <p className="mt-3 max-w-xs text-sm leading-relaxed text-[var(--text-secondary)]">
-                      {cooking.shortDescription}
-                    </p>
+              {/* Centre Multi-Pouch Floating Visual Composition (Product image transition: 420ms) */}
+              <div className="relative z-10 my-2 flex flex-1 items-center justify-center">
+                {cat.isComingSoonOnly ? (
+                  <div
+                    className={`flex max-w-[300px] flex-col items-center rounded-2xl border border-dashed border-[var(--brand-crimson)]/40 bg-white/80 px-6 py-6 text-center shadow-xs transition-transform duration-[350ms] ${
+                      isCenter ? 'scale-100' : 'scale-95'
+                    }`}
+                  >
+                    <span className="font-tamil text-xl font-bold text-[var(--brand-crimson)]">
+                      மாங்காய் & களாக்காய் ஊறுகாய்
+                    </span>
+                    <span className="font-display mt-1 text-base font-bold text-[var(--text-primary)]">
+                      Seasonal Madurai Pickles
+                    </span>
+                    <span className="mt-1.5 text-xs leading-relaxed text-[var(--text-secondary)]">
+                      Featured on Instagram Reels. Jar photography & online pricing pending —
+                      enquire directly on WhatsApp.
+                    </span>
                   </div>
-
-                  {/* Large Multi-Pouch Floating Trio */}
-                  <div className="relative flex h-[240px] items-center justify-center sm:col-span-6 sm:h-[285px]">
+                ) : (
+                  <div className="relative flex h-[215px] w-full items-center justify-center sm:h-[235px]">
                     {pouches[1] && (
-                      <div className="relative -mr-14 mt-10 h-[185px] w-[140px] -rotate-10 transition-transform duration-500 ease-out group-hover:-translate-x-3 group-hover:-rotate-12">
+                      <div
+                        style={{
+                          viewTransitionName: isCenter
+                            ? `collection-pouch-1-${cat.slug}`
+                            : undefined,
+                        }}
+                        className={`relative -mr-12 mt-8 h-[160px] w-[124px] transition-transform duration-[420ms] ease-out sm:h-[178px] sm:w-[136px] ${
+                          isCenter
+                            ? '-translate-x-2 -rotate-11 scale-100 group-hover:-translate-x-3.5 group-hover:-rotate-13'
+                            : 'translate-x-1 -rotate-6 scale-92 opacity-85'
+                        }`}
+                      >
                         <PouchImage
                           src={pouches[1].src}
                           fallbackSrc={pouches[1].fallback}
                           alt={pouches[1].alt}
-                          width={240}
-                          height={320}
-                          imgClassName="pouch-float-light"
+                          width={220}
+                          height={293}
+                          imgClassName={
+                            spec.darkSurface ? 'pouch-float-dark' : 'pouch-float-light'
+                          }
                         />
                       </div>
                     )}
-                    <div className="relative z-20 h-[240px] w-[185px] transition-transform duration-500 ease-out group-hover:-translate-y-2.5 group-hover:scale-[1.04]">
-                      <PouchImage
-                        src={pouches[0]!.src}
-                        fallbackSrc={pouches[0]!.fallback}
-                        alt={pouches[0]!.alt}
-                        width={420}
-                        height={560}
-                        priority
-                        imgClassName="pouch-float-light"
-                      />
-                    </div>
+
+                    {pouches[0] && (
+                      <div
+                        style={{
+                          viewTransitionName: isCenter
+                            ? `collection-pouch-0-${cat.slug}`
+                            : undefined,
+                        }}
+                        className={`relative z-20 h-[205px] w-[158px] transition-transform duration-[420ms] ease-out sm:h-[228px] sm:w-[176px] ${
+                          isCenter
+                            ? '-translate-y-1.5 scale-[1.05] group-hover:-translate-y-3 group-hover:scale-[1.08]'
+                            : 'translate-y-1 scale-95'
+                        }`}
+                      >
+                        <PouchImage
+                          src={pouches[0].src}
+                          fallbackSrc={pouches[0].fallback}
+                          alt={pouches[0].alt}
+                          width={420}
+                          height={560}
+                          priority
+                          imgClassName={
+                            spec.darkSurface ? 'pouch-float-dark' : 'pouch-float-light'
+                          }
+                        />
+                      </div>
+                    )}
+
                     {pouches[2] && (
-                      <div className="relative -ml-14 mt-10 h-[185px] w-[140px] rotate-10 transition-transform duration-500 ease-out group-hover:translate-x-3 group-hover:rotate-12">
+                      <div
+                        style={{
+                          viewTransitionName: isCenter
+                            ? `collection-pouch-2-${cat.slug}`
+                            : undefined,
+                        }}
+                        className={`relative -ml-12 mt-8 h-[160px] w-[124px] transition-transform duration-[420ms] ease-out sm:h-[178px] sm:w-[136px] ${
+                          isCenter
+                            ? 'translate-x-2 rotate-11 scale-100 group-hover:translate-x-3.5 group-hover:rotate-13'
+                            : '-translate-x-1 rotate-6 scale-92 opacity-85'
+                        }`}
+                      >
                         <PouchImage
                           src={pouches[2].src}
                           fallbackSrc={pouches[2].fallback}
                           alt={pouches[2].alt}
-                          width={240}
-                          height={320}
-                          imgClassName="pouch-float-light"
+                          width={220}
+                          height={293}
+                          imgClassName={
+                            spec.darkSurface ? 'pouch-float-dark' : 'pouch-float-light'
+                          }
                         />
                       </div>
                     )}
                   </div>
-                </div>
+                )}
+              </div>
 
-                <div className="relative z-20 flex items-center justify-between border-t border-[#C8AE86]/45 pt-4">
-                  <span className="text-xs font-bold text-[var(--text-primary)]">
-                    Sambar • Kuzhambu • Rasam • Turmeric
-                  </span>
-                  <span className="inline-flex items-center gap-1.5 text-sm font-bold text-[var(--brand-crimson)]">
-                    Enter Collection
-                    <ArrowUpRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" aria-hidden="true" />
-                  </span>
-                </div>
-              </Link>
-            );
-          })()}
-
-          {/* 02: Non-Veg Masalas (5 cols, dramatic smoked crimson spice chamber) */}
-          {nonVeg && (() => {
-            const spec = EXHIBITION_SPECS[nonVeg.slug]!;
-            const pouches = getPouches(nonVeg, 3);
-            return (
-              <Link
-                href={`/categories/${nonVeg.slug}`}
-                style={spec.stageStyle}
-                className={`group relative flex min-h-[390px] flex-col justify-between overflow-hidden rounded-[32px] border p-6 shadow-md transition-shadow duration-500 hover:shadow-2xl sm:min-h-[430px] sm:p-8 lg:col-span-5 ${spec.surfaceClass}`}
+              {/* Bottom Title, Tamil Name, Description & Action Footer (Text: 210ms, Hover: 180ms) */}
+              <div
+                className={`relative z-20 border-t pt-3.5 transition-transform duration-[210ms] ease-out ${spec.borderDividerClass}`}
               >
-                <div
-                  aria-hidden="true"
-                  className="pointer-events-none absolute left-1/2 top-[44%] h-56 w-56 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#F7CE68]/35 blur-3xl transition-opacity duration-500 group-hover:opacity-95"
-                />
-
-                <div className="relative z-20 flex items-center justify-between gap-2">
-                  <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#F7CE68]">
-                    {spec.eyebrow}
-                  </span>
-                  <span className="font-mono-num rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-bold text-[#FBF5EC]">
-                    {nonVeg.productCount} Blends
-                  </span>
-                </div>
-
-                {/* Elevated Dramatic Floating Fan */}
-                <div className="relative z-10 my-3 flex h-[230px] items-center justify-center">
-                  {pouches[1] && (
-                    <div className="relative -mr-12 mt-7 h-[180px] w-[138px] -rotate-9 transition-transform duration-500 ease-out group-hover:-translate-x-3 group-hover:-rotate-12">
-                      <PouchImage
-                        src={pouches[1].src}
-                        fallbackSrc={pouches[1].fallback}
-                        alt={pouches[1].alt}
-                        width={240}
-                        height={320}
-                        imgClassName="pouch-float-dark"
-                      />
-                    </div>
-                  )}
-                  <div className="relative z-20 h-[225px] w-[175px] transition-transform duration-500 ease-out group-hover:-translate-y-2.5 group-hover:scale-[1.05]">
-                    <PouchImage
-                      src={pouches[0]!.src}
-                      fallbackSrc={pouches[0]!.fallback}
-                      alt={pouches[0]!.alt}
-                      width={420}
-                      height={560}
-                      priority
-                      imgClassName="pouch-float-dark"
-                    />
-                  </div>
-                  {pouches[2] && (
-                    <div className="relative -ml-12 mt-7 h-[180px] w-[138px] rotate-9 transition-transform duration-500 ease-out group-hover:translate-x-3 group-hover:rotate-12">
-                      <PouchImage
-                        src={pouches[2].src}
-                        fallbackSrc={pouches[2].fallback}
-                        alt={pouches[2].alt}
-                        width={240}
-                        height={320}
-                        imgClassName="pouch-float-dark"
-                      />
-                    </div>
-                  )}
-                </div>
-
-                <div className="relative z-20">
-                  <p className="font-tamil text-xs font-semibold text-[#F7CE68]">
-                    {nonVeg.tamilName}
-                  </p>
-                  <div className="mt-1 flex items-end justify-between gap-3">
-                    <div>
-                      <h3 className="font-display text-2xl font-bold leading-tight text-white sm:text-3xl">
-                        {nonVeg.name}
-                      </h3>
-                      <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-[#E3CEBA]">
-                        Bhai Veetu Kari, Meen Kuzhambu & crisp Fish Fry spice blends.
-                      </p>
-                    </div>
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#F7CE68] text-[#23130D] transition-transform duration-300 group-hover:scale-110">
-                      <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
-                    </span>
-                  </div>
-                </div>
-              </Link>
-            );
-          })()}
-        </div>
-
-        {/* =================================================================
-            EXHIBITION ROW 2 — Inverted Asymmetric Split (5 cols + 7 cols)
-            ================================================================= */}
-        <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-12">
-          {/* 03: Traditional Podi (5 cols, sunlit sesame-ochre arched cascade) */}
-          {podi && (() => {
-            const spec = EXHIBITION_SPECS[podi.slug]!;
-            const pouches = getPouches(podi, 3);
-            return (
-              <Link
-                href={`/categories/${podi.slug}`}
-                style={spec.stageStyle}
-                className={`group relative flex min-h-[380px] flex-col justify-between overflow-hidden rounded-[32px] border p-6 shadow-sm transition-shadow duration-500 hover:shadow-xl sm:p-8 lg:col-span-5 ${spec.surfaceClass}`}
-              >
-                {/* Architectural subtle temple arch hairline */}
-                <div
-                  aria-hidden="true"
-                  className="pointer-events-none absolute inset-x-10 top-12 bottom-28 rounded-t-full border border-[#B97A2E]/22"
-                />
-
-                <div className="relative z-20 flex items-center justify-between gap-2">
-                  <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#9A4208]">
-                    {spec.eyebrow}
-                  </span>
-                  <span className="font-mono-num rounded-full bg-white/85 px-3 py-1 text-xs font-bold text-[var(--text-primary)]">
-                    {podi.productCount} Podis
-                  </span>
-                </div>
-
-                {/* Stepped 3-Pouch Podi Cascade */}
-                <div className="relative z-10 my-3 flex h-[225px] items-center justify-center">
-                  {pouches[1] && (
-                    <div className="relative -mr-10 mt-8 h-[175px] w-[134px] -rotate-8 transition-transform duration-500 ease-out group-hover:-translate-x-2.5 group-hover:-translate-y-1">
-                      <PouchImage
-                        src={pouches[1].src}
-                        fallbackSrc={pouches[1].fallback}
-                        alt={pouches[1].alt}
-                        width={220}
-                        height={293}
-                        imgClassName="pouch-float-light"
-                      />
-                    </div>
-                  )}
-                  <div className="relative z-20 h-[218px] w-[168px] transition-transform duration-500 ease-out group-hover:-translate-y-2.5 group-hover:scale-[1.05]">
-                    <PouchImage
-                      src={pouches[0]!.src}
-                      fallbackSrc={pouches[0]!.fallback}
-                      alt={pouches[0]!.alt}
-                      width={420}
-                      height={560}
-                      imgClassName="pouch-float-light"
-                    />
-                  </div>
-                  {pouches[2] && (
-                    <div className="relative -ml-10 mt-8 h-[175px] w-[134px] rotate-8 transition-transform duration-500 ease-out group-hover:translate-x-2.5 group-hover:-translate-y-1">
-                      <PouchImage
-                        src={pouches[2].src}
-                        fallbackSrc={pouches[2].fallback}
-                        alt={pouches[2].alt}
-                        width={220}
-                        height={293}
-                        imgClassName="pouch-float-light"
-                      />
-                    </div>
-                  )}
-                </div>
-
-                <div className="relative z-20 flex items-end justify-between gap-3 border-t border-[#C8A677]/40 pt-4">
-                  <div>
-                    <p className="font-tamil text-xs font-bold text-[#9A4208]">{podi.tamilName}</p>
-                    <h3 className="font-display mt-0.5 text-2xl font-bold leading-tight sm:text-3xl">
-                      {podi.name}
+                <p
+                  className={`font-tamil text-xs font-bold transition-opacity duration-[200ms] ${spec.accentTextClass} ${
+                    isCenter ? 'opacity-100' : 'opacity-80'
+                  }`}
+                >
+                  {cat.tamilName}
+                </p>
+                <div className="mt-0.5 flex items-end justify-between gap-3">
+                  <div className="min-w-0">
+                    <h3
+                      style={{
+                        viewTransitionName: isCenter
+                          ? `collection-title-${cat.slug}`
+                          : undefined,
+                      }}
+                      className={`font-display line-clamp-2 text-[19px] font-bold leading-[1.15] transition-transform duration-[210ms] ease-out sm:text-[22px] ${
+                        spec.darkSurface ? 'text-white' : ''
+                      } ${isCenter ? 'translate-x-0' : 'opacity-90'}`}
+                    >
+                      {cat.name}
                     </h3>
-                    <p className="mt-1 text-xs text-[var(--text-secondary)]">
-                      Milagai • Poondu • Ellu • Kollu • Pirandai
+                    <p
+                      className={`mt-1 line-clamp-1 text-xs transition-opacity duration-[210ms] ${spec.subTextClass} ${
+                        isCenter ? 'opacity-100' : 'opacity-75'
+                      }`}
+                    >
+                      {spec.tagline}
                     </p>
                   </div>
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--bg-deep)] text-[#FBF5EC] transition-colors group-hover:bg-[var(--brand-crimson)]">
+
+                  <span
+                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-all duration-[180ms] ease-out ${
+                      spec.darkSurface
+                        ? 'bg-[#F7CE68] text-[#23130D]'
+                        : 'bg-[var(--bg-deep)] text-[#FBF5EC]'
+                    } ${
+                      isCenter
+                        ? 'scale-100 group-hover:scale-110 group-hover:bg-[var(--brand-crimson)] group-hover:text-white'
+                        : 'scale-90 opacity-80'
+                    }`}
+                  >
                     <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
                   </span>
                 </div>
-              </Link>
-            );
-          })()}
-
-          {/* 04: Traditional Food Mixes (7 cols, serene banana-leaf sage courtyard) */}
-          {foodMixes && (() => {
-            const spec = EXHIBITION_SPECS[foodMixes.slug]!;
-            const pouches = getPouches(foodMixes, 3);
-            return (
-              <Link
-                href={`/categories/${foodMixes.slug}`}
-                style={spec.stageStyle}
-                className={`group relative flex min-h-[380px] flex-col justify-between overflow-hidden rounded-[32px] border p-6 shadow-sm transition-shadow duration-500 hover:shadow-xl sm:p-9 lg:col-span-7 ${spec.surfaceClass}`}
-              >
-                <span
-                  aria-hidden="true"
-                  className="font-display pointer-events-none absolute -right-4 -top-8 select-none text-[11rem] font-bold leading-none text-[#1C5C33]/[0.07]"
-                >
-                  04
-                </span>
-
-                <div className="relative z-20 flex items-center justify-between gap-2">
-                  <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-[var(--brand-leaf)]">
-                    {spec.eyebrow}
-                  </span>
-                  <span className="font-mono-num rounded-full bg-white/85 px-3 py-1 text-xs font-bold text-[#16271C]">
-                    {foodMixes.productCount} Mixes
-                  </span>
-                </div>
-
-                <div className="relative z-10 my-4 grid grid-cols-1 items-center gap-6 sm:grid-cols-12">
-                  {/* Large Left-Aligned Pouch Composition (inverted from Row 1 for rhythm!) */}
-                  <div className="relative order-2 flex h-[230px] items-center justify-center sm:order-1 sm:col-span-6 sm:h-[265px]">
-                    {pouches[1] && (
-                      <div className="relative -mr-14 mt-9 h-[175px] w-[134px] -rotate-8 transition-transform duration-500 ease-out group-hover:-translate-x-3">
-                        <PouchImage
-                          src={pouches[1].src}
-                          fallbackSrc={pouches[1].fallback}
-                          alt={pouches[1].alt}
-                          width={220}
-                          height={293}
-                          imgClassName="pouch-float-light"
-                        />
-                      </div>
-                    )}
-                    <div className="relative z-20 h-[230px] w-[178px] transition-transform duration-500 ease-out group-hover:-translate-y-2.5 group-hover:scale-[1.04]">
-                      <PouchImage
-                        src={pouches[0]!.src}
-                        fallbackSrc={pouches[0]!.fallback}
-                        alt={pouches[0]!.alt}
-                        width={420}
-                        height={560}
-                        imgClassName="pouch-float-light"
-                      />
-                    </div>
-                    {pouches[2] && (
-                      <div className="relative -ml-14 mt-9 h-[175px] w-[134px] rotate-8 transition-transform duration-500 ease-out group-hover:translate-x-3">
-                        <PouchImage
-                          src={pouches[2].src}
-                          fallbackSrc={pouches[2].fallback}
-                          alt={pouches[2].alt}
-                          width={220}
-                          height={293}
-                          imgClassName="pouch-float-light"
-                        />
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="order-1 sm:order-2 sm:col-span-6">
-                    <p className="font-tamil text-sm font-bold text-[var(--brand-leaf)]">
-                      {foodMixes.tamilName}
-                    </p>
-                    <h3 className="font-display mt-1.5 text-3xl font-bold leading-[1.08] tracking-[-0.02em] sm:text-[2.15rem]">
-                      {foodMixes.name}
-                    </h3>
-                    <p className="mt-3 text-sm leading-relaxed text-[#2F4737]">
-                      {foodMixes.shortDescription}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="relative z-20 flex items-center justify-between border-t border-[#9BB99A]/45 pt-4">
-                  <span className="text-xs font-bold text-[#1D3927]">
-                    Adai Dosai • Red Rice Puttu • Millet Tiffin
-                  </span>
-                  <span className="inline-flex items-center gap-1.5 text-sm font-bold text-[var(--brand-leaf)]">
-                    Enter Collection
-                    <ArrowUpRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" aria-hidden="true" />
-                  </span>
-                </div>
-              </Link>
-            );
-          })()}
-        </div>
-
-        {/* =================================================================
-            EXHIBITION ROW 3 — Balanced Editorial Pair (6 cols + 6 cols)
-            ================================================================= */}
-        <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-12">
-          {/* 05: Millet & Flour Products */}
-          {millets && (() => {
-            const spec = EXHIBITION_SPECS[millets.slug]!;
-            const pouches = getPouches(millets, 2);
-            return (
-              <Link
-                href={`/categories/${millets.slug}`}
-                style={spec.stageStyle}
-                className={`group relative flex min-h-[320px] flex-col justify-between overflow-hidden rounded-[32px] border p-6 shadow-sm transition-shadow duration-500 hover:shadow-xl sm:p-8 lg:col-span-6 ${spec.surfaceClass}`}
-              >
-                <div className="relative z-20 flex items-center justify-between gap-2">
-                  <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#72441E]">
-                    {spec.eyebrow}
-                  </span>
-                  <span className="font-mono-num rounded-full bg-white/85 px-3 py-1 text-xs font-bold text-[var(--text-primary)]">
-                    {millets.productCount} Flours
-                  </span>
-                </div>
-
-                <div className="relative z-10 my-4 grid grid-cols-1 items-center gap-4 sm:grid-cols-12">
-                  <div className="sm:col-span-6">
-                    <p className="font-tamil text-xs font-bold text-[#72441E]">
-                      {millets.tamilName}
-                    </p>
-                    <h3 className="font-display mt-1 text-2xl font-bold leading-snug sm:text-[1.85rem]">
-                      {millets.name}
-                    </h3>
-                    <p className="mt-2 text-xs leading-relaxed text-[var(--text-secondary)]">
-                      {millets.shortDescription}
-                    </p>
-                  </div>
-                  <div className="relative flex h-[205px] items-center justify-center sm:col-span-6">
-                    {pouches[1] && (
-                      <div className="relative -mr-10 mt-6 h-[165px] w-[126px] -rotate-8 transition-transform duration-500 group-hover:-translate-x-2">
-                        <PouchImage
-                          src={pouches[1].src}
-                          fallbackSrc={pouches[1].fallback}
-                          alt={pouches[1].alt}
-                          width={220}
-                          height={293}
-                          imgClassName="pouch-float-light"
-                        />
-                      </div>
-                    )}
-                    <div className="relative z-20 h-[205px] w-[158px] rotate-3 transition-transform duration-500 group-hover:-translate-y-2 group-hover:scale-[1.04]">
-                      <PouchImage
-                        src={pouches[0]!.src}
-                        fallbackSrc={pouches[0]!.fallback}
-                        alt={pouches[0]!.alt}
-                        width={340}
-                        height={453}
-                        imgClassName="pouch-float-light"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="relative z-20 flex items-center justify-between border-t border-[#C4AE90]/45 pt-3.5">
-                  <span className="text-xs font-semibold text-[var(--text-secondary)]">
-                    Red Rice Puttu • Idiyappam • Multigrain Chapathi
-                  </span>
-                  <span className="inline-flex items-center gap-1 text-xs font-bold text-[#72441E]">
-                    Explore <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
-                  </span>
-                </div>
-              </Link>
-            );
-          })()}
-
-          {/* 06: Healthy Mixes (luminous heirloom rose-clay making dark Ulundhu Kali pop!) */}
-          {healthy && (() => {
-            const spec = EXHIBITION_SPECS[healthy.slug]!;
-            const pouches = getPouches(healthy, 3);
-            return (
-              <Link
-                href={`/categories/${healthy.slug}`}
-                style={spec.stageStyle}
-                className={`group relative flex min-h-[320px] flex-col justify-between overflow-hidden rounded-[32px] border p-6 shadow-sm transition-shadow duration-500 hover:shadow-xl sm:p-8 lg:col-span-6 ${spec.surfaceClass}`}
-              >
-                <div className="relative z-20 flex items-center justify-between gap-2">
-                  <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#6E262E]">
-                    {spec.eyebrow}
-                  </span>
-                  <span className="font-mono-num rounded-full bg-white/85 px-3 py-1 text-xs font-bold text-[var(--text-primary)]">
-                    {healthy.productCount} Mixes
-                  </span>
-                </div>
-
-                <div className="relative z-10 my-4 grid grid-cols-1 items-center gap-4 sm:grid-cols-12">
-                  <div className="sm:col-span-5">
-                    <p className="font-tamil text-xs font-bold text-[#6E262E]">
-                      {healthy.tamilName}
-                    </p>
-                    <h3 className="font-display mt-1 text-2xl font-bold leading-snug sm:text-[1.85rem]">
-                      {healthy.name}
-                    </h3>
-                    <p className="mt-2 text-xs leading-relaxed text-[var(--text-secondary)]">
-                      {healthy.shortDescription}
-                    </p>
-                  </div>
-                  <div className="relative flex h-[205px] items-center justify-center sm:col-span-7">
-                    {pouches[1] && (
-                      <div className="relative -mr-10 mt-6 h-[160px] w-[122px] -rotate-8 transition-transform duration-500 group-hover:-translate-x-2.5">
-                        <PouchImage
-                          src={pouches[1].src}
-                          fallbackSrc={pouches[1].fallback}
-                          alt={pouches[1].alt}
-                          width={220}
-                          height={293}
-                          imgClassName="pouch-float-light"
-                        />
-                      </div>
-                    )}
-                    <div className="relative z-20 h-[205px] w-[158px] transition-transform duration-500 group-hover:-translate-y-2 group-hover:scale-[1.05]">
-                      <PouchImage
-                        src={pouches[0]!.src}
-                        fallbackSrc={pouches[0]!.fallback}
-                        alt={pouches[0]!.alt}
-                        width={340}
-                        height={453}
-                        imgClassName="pouch-float-light"
-                      />
-                    </div>
-                    {pouches[2] && (
-                      <div className="relative -ml-10 mt-6 h-[160px] w-[122px] rotate-8 transition-transform duration-500 group-hover:translate-x-2.5">
-                        <PouchImage
-                          src={pouches[2].src}
-                          fallbackSrc={pouches[2].fallback}
-                          alt={pouches[2].alt}
-                          width={220}
-                          height={293}
-                          imgClassName="pouch-float-light"
-                        />
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="relative z-20 flex items-center justify-between border-t border-[#C4A59D]/45 pt-3.5">
-                  <span className="text-xs font-semibold text-[var(--text-secondary)]">
-                    Ulundhu Kali • Karuppu Kavuni • Kollu • Sathu Maavu
-                  </span>
-                  <span className="inline-flex items-center gap-1 text-xs font-bold text-[#6E262E]">
-                    Explore <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
-                  </span>
-                </div>
-              </Link>
-            );
-          })()}
-        </div>
-
-        {/* =================================================================
-            EXHIBITION ROW 4 — Specialty Atelier Duet (Seasonal Pickles + External Herbal Care)
-            ================================================================= */}
-        <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-12">
-          {/* 07: Seasonal Pickles (Honest Seasonal Atelier — zero misleading spice pouches!) */}
-          {pickles && (() => {
-            const spec = EXHIBITION_SPECS[pickles.slug]!;
-            return (
-              <Link
-                href={`/categories/${pickles.slug}`}
-                style={spec.stageStyle}
-                className={`group relative flex flex-col justify-between overflow-hidden rounded-[28px] border p-6 shadow-xs transition-shadow duration-500 hover:shadow-lg sm:flex-row sm:items-center sm:p-7 lg:col-span-6 ${spec.surfaceClass}`}
-              >
-                <div className="max-w-sm">
-                  <span className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.2em] text-[var(--brand-crimson)]">
-                    <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
-                    {spec.eyebrow}
-                  </span>
-                  <h3 className="font-display mt-1.5 text-2xl font-bold leading-tight">
-                    {pickles.name}
-                  </h3>
-                  <p className="font-tamil text-xs font-bold text-[var(--brand-crimson)]">
-                    {pickles.tamilName} — மாங்காய் & களாக்காய்
-                  </p>
-                  <p className="mt-2 text-xs leading-relaxed text-[var(--text-secondary)]">
-                    Seasonal Mango & Kalaka Pickle batches featured on our Instagram Reels. Jar
-                    photographs & online MRPs pending — enquire directly for availability.
-                  </p>
-                </div>
-
-                <div className="mt-5 flex shrink-0 flex-col items-start gap-2 sm:mt-0 sm:items-end">
-                  <span className="rounded-full bg-amber-100 px-3 py-1 text-[11px] font-bold text-amber-950">
-                    Seasonal • WhatsApp Enquiry
-                  </span>
-                  <span className="inline-flex items-center gap-1 text-xs font-bold text-[var(--brand-crimson)]">
-                    View Pickle Details <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
-                  </span>
-                </div>
-              </Link>
-            );
-          })()}
-
-          {/* 08: Traditional Herbal Care (External Bathing Only — Distinct Botanical Segregation) */}
-          {herbal && (() => {
-            const spec = EXHIBITION_SPECS[herbal.slug]!;
-            const pouches = getPouches(herbal, 1);
-            return (
-              <Link
-                href={`/categories/${herbal.slug}`}
-                style={spec.stageStyle}
-                className={`group relative flex items-center justify-between gap-4 overflow-hidden rounded-[28px] border p-6 shadow-xs transition-shadow duration-500 hover:shadow-lg sm:p-7 lg:col-span-6 ${spec.surfaceClass}`}
-              >
-                <div className="min-w-0 flex-1">
-                  <span className="inline-flex items-center gap-1 rounded-full bg-amber-900 px-2.5 py-0.5 text-[10px] font-bold text-amber-50">
-                    <AlertTriangle className="h-3 w-3" aria-hidden="true" />
-                    External Bathing Use Only • Non-Edible
-                  </span>
-                  <h3 className="font-display mt-2 text-2xl font-bold leading-tight">
-                    {herbal.name}
-                  </h3>
-                  <p className="font-tamil text-xs font-bold text-[#525A14]">{herbal.tamilName}</p>
-                  <p className="mt-1.5 text-xs leading-relaxed text-[#464A21]">
-                    Traditional Nalangu Maavu herbal bath powder kept strictly separate from
-                    culinary foods.
-                  </p>
-                  <span className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-[#464A21]">
-                    View Herbal Care <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
-                  </span>
-                </div>
-
-                {pouches[0] && (
-                  <div className="relative h-36 w-28 shrink-0 transition-transform duration-400 group-hover:-translate-y-1.5 group-hover:scale-105">
-                    <PouchImage
-                      src={pouches[0].src}
-                      fallbackSrc={pouches[0].fallback}
-                      alt={pouches[0].alt}
-                      width={200}
-                      height={266}
-                      imgClassName="pouch-float-light"
-                    />
-                  </div>
-                )}
-              </Link>
-            );
-          })()}
-        </div>
+              </div>
+            </Link>
+          );
+        })}
       </div>
+
+      {/* Bottom Active Collection Indicator Bar + Quick Direct Enter Link */}
+      <div className="mx-auto mt-4 flex max-w-6xl flex-col items-center justify-center gap-3 px-4 sm:px-6">
+        <div
+          role="tablist"
+          aria-label="Choose featured collection"
+          className="flex flex-wrap items-center justify-center gap-1.5 sm:gap-2"
+        >
+          {categories.map((cat, idx) => {
+            const active = idx === activeIndex;
+            const shortLabel =
+              COLLECTION_SHORT_TAB_LABELS[cat.slug] ??
+              cat.name.split('&')[0]?.trim() ??
+              cat.name;
+            return (
+              <button
+                key={cat.id}
+                role="tab"
+                aria-selected={active}
+                aria-label={`0${idx + 1} ${cat.name}`}
+                type="button"
+                onClick={() => focusCollectionIndex(idx)}
+                className={`inline-flex min-h-[34px] items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 text-xs font-semibold transition-all duration-[200ms] sm:px-3 ${
+                  active
+                    ? 'border-[var(--brand-crimson)] bg-[var(--brand-crimson)] text-white shadow-xs'
+                    : 'border-[var(--border-strong)]/70 bg-[var(--bg-surface)]/80 text-[var(--text-secondary)] hover:border-[var(--brand-crimson)] hover:text-[var(--text-primary)]'
+                }`}
+              >
+                <span className="font-mono-num text-[10px] opacity-75">0{idx + 1}</span>
+                <span className={active ? 'inline' : 'hidden md:inline'}>{shortLabel}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        <p className="text-xs text-[var(--text-muted)]">
+          Drag the shelf or click any side card to focus, or click{' '}
+          <Link
+            href={`/categories/${activeCategory.slug}`}
+            onClick={(e) => navigateToCollectionConnected(activeCategory, e)}
+            className="font-bold text-[var(--brand-crimson)] underline-offset-2 transition-colors duration-[180ms] hover:underline"
+          >
+            {activeCategory.name}
+          </Link>{' '}
+          to enter the collection.
+        </p>
+      </div>
+
+      {/* Connected Shared-Element Transition Bridge Overlay during Navigation Launch */}
+      {launchingCategory && launchingTheme && (
+        <div
+          aria-hidden="true"
+          data-connected-portal={launchingCategory.slug}
+          style={{ background: launchingTheme.stageBg }}
+          className={`animate-collection-stage pointer-events-none fixed inset-x-0 top-[68px] z-50 border-b shadow-2xl ${launchingTheme.surfaceClass}`}
+        >
+          <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-8">
+            <div>
+              <p
+                className={`text-xs font-bold uppercase tracking-[0.18em] ${launchingTheme.accentTextClass}`}
+              >
+                {launchingTheme.eyebrow}
+              </p>
+              <p className={`font-tamil mt-1 text-sm font-bold ${launchingTheme.accentTextClass}`}>
+                {launchingCategory.tamilName}
+              </p>
+              <p
+                className={`font-display mt-0.5 text-2xl font-bold sm:text-4xl ${
+                  launchingTheme.darkSurface ? 'text-white' : 'text-[var(--text-primary)]'
+                }`}
+              >
+                {launchingCategory.name}
+              </p>
+            </div>
+            <span className="font-mono-num rounded-full border border-current/25 px-3.5 py-1 text-xs font-bold">
+              Opening Collection…
+            </span>
+          </div>
+        </div>
+      )}
     </section>
   );
 }

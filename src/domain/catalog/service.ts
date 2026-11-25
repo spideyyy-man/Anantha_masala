@@ -8,6 +8,7 @@ import {
   products,
   productVariants,
 } from '@/db/schema';
+import { filterAndSortCatalogProducts } from './filter';
 
 export interface CatalogVariant {
   id: number;
@@ -102,85 +103,10 @@ export interface CatalogFacets {
 
 export interface CatalogQueryResult {
   products: CatalogProduct[];
+  allProducts: CatalogProduct[];
+  categories: CatalogCategorySummary[];
   totalCount: number;
   facets: CatalogFacets;
-}
-
-/** Curated bilingual Tamil / Romanized / English culinary synonym pairs */
-const SEARCH_SYNONYM_GROUPS: string[][] = [
-  ['turmeric', 'manjal', 'haldi', 'மஞ்சள்'],
-  ['chilli', 'chili', 'milagai', 'mirchi', 'red chilli', 'மிளகாய்'],
-  ['garlic', 'poondu', 'பூண்டு'],
-  ['sesame', 'ellu', 'til', 'எள்ளு'],
-  ['horse gram', 'kollu', 'கொள்ளு'],
-  ['veldt grape', 'pirandai', 'பிரண்டை'],
-  ['fish', 'meen', 'seafood', 'மீன்'],
-  ['meat', 'kari', 'mutton', 'chicken', 'kurma', 'கறி', 'மட்டன்', 'சிக்கன்'],
-  ['black rice', 'karuppu kavuni', 'kavuni', 'கருப்பு கவுனி'],
-  ['red rice', 'sivappu arisi', 'சிவப்பு அரிசி'],
-  ['black gram', 'ulundhu', 'urad', 'ulutha', 'உளுந்து'],
-  ['millet', 'sirudhaniyam', 'sirudhaniya', 'சிறுதானிய'],
-  ['dosa', 'dosai', 'தோசை'],
-  ['idli', 'idly', 'இட்லி'],
-  ['podi', 'powder', 'gunpowder', 'பொடி'],
-  ['curry', 'kuzhambu', 'kulambu', 'குழம்பு'],
-  ['sambar', 'sambhar', 'சாம்பார்'],
-  ['rasam', 'sourashtra', 'saurashtra', 'ரசம்', 'ரசப்'],
-  ['porridge', 'kanji', 'malt', 'sathu maavu', 'கஞ்சி', 'சத்து மாவு'],
-  ['bath', 'nalangu', 'kuliyal', 'herbal', 'ubtan', 'குளியல்', 'நலுங்கு'],
-  ['pickle', 'oorugai', 'mango', 'kalaka', 'ஊறுகாய்'],
-  ['chapathi', 'chapati', 'roti', 'atta', 'multigrain', 'சப்பாத்தி'],
-  ['puttu', 'idiyappam', 'string hopper', 'புட்டு', 'இடியாப்பம்'],
-];
-
-function expandSearchTokens(rawQuery: string): string[] {
-  const clean = rawQuery.trim().toLowerCase();
-  if (!clean) return [];
-  const baseTokens = clean.split(/[\s,/-]+/).filter(Boolean);
-  const expanded = new Set<string>([clean, ...baseTokens]);
-
-  for (const group of SEARCH_SYNONYM_GROUPS) {
-    const matched = group.some((term) => clean.includes(term) || baseTokens.some((t) => term.includes(t) && t.length >= 3));
-    if (matched) {
-      for (const term of group) expanded.add(term);
-    }
-  }
-  return Array.from(expanded);
-}
-
-function scoreProductMatch(product: CatalogProduct, rawQuery: string, expandedTokens: string[]): number {
-  const q = rawQuery.trim().toLowerCase();
-  if (!q) return 1;
-
-  const nameLower = product.name.toLowerCase();
-  const tamilLower = product.tamilName.toLowerCase();
-  const summaryLower = product.shortSummary.toLowerCase();
-  const descLower = product.description.toLowerCase();
-  const synonymsLower = product.searchSynonyms.map((s) => s.toLowerCase());
-  const usageLower = product.usageTags.map((u) => u.toLowerCase());
-  const catLower = product.categorySlugs.join(' ').toLowerCase();
-
-  let score = 0;
-  if (nameLower === q || tamilLower === q) score += 120;
-  else if (nameLower.startsWith(q) || tamilLower.startsWith(q)) score += 90;
-  else if (nameLower.includes(q) || tamilLower.includes(q)) score += 70;
-
-  if (synonymsLower.some((s) => s === q)) score += 80;
-  else if (synonymsLower.some((s) => s.includes(q))) score += 55;
-
-  if (summaryLower.includes(q) || usageLower.some((u) => u.includes(q))) score += 35;
-  if (descLower.includes(q) || catLower.includes(q)) score += 20;
-
-  // Token + synonym expansion scoring
-  for (const token of expandedTokens) {
-    if (token.length < 2) continue;
-    if (nameLower.includes(token) || tamilLower.includes(token)) score += 28;
-    else if (synonymsLower.some((s) => s.includes(token))) score += 22;
-    else if (usageLower.some((u) => u.includes(token))) score += 14;
-    else if (summaryLower.includes(token)) score += 10;
-  }
-
-  return score;
 }
 
 export async function getAllCategories(): Promise<CatalogCategorySummary[]> {
@@ -334,82 +260,11 @@ export async function queryCatalog(input: CatalogFilterInput = {}): Promise<Cata
     },
   };
 
-  const rawQuery = input.q?.trim() ?? '';
-  const expandedTokens = expandSearchTokens(rawQuery);
-
-  let scored = allProducts.map((product) => ({
-    product,
-    score: rawQuery ? scoreProductMatch(product, rawQuery, expandedTokens) : 1,
-  }));
-
-  if (rawQuery) {
-    scored = scored.filter((item) => item.score > 0);
-  }
-
-  if (input.categories && input.categories.length > 0) {
-    const catSet = new Set(input.categories);
-    scored = scored.filter(({ product }) => product.categorySlugs.some((slug) => catSet.has(slug)));
-  }
-
-  if (input.packSizes && input.packSizes.length > 0) {
-    const sizeSet = new Set(input.packSizes);
-    scored = scored.filter(({ product }) =>
-      product.variants.some((v) => v.netWeightGrams !== null && sizeSet.has(v.netWeightGrams))
-    );
-  }
-
-  if (input.minPriceInr !== undefined && Number.isFinite(input.minPriceInr)) {
-    const minPaise = Math.round(input.minPriceInr * 100);
-    scored = scored.filter(({ product }) => product.maxPricePaise !== null && product.maxPricePaise >= minPaise);
-  }
-
-  if (input.maxPriceInr !== undefined && Number.isFinite(input.maxPriceInr)) {
-    const maxPaise = Math.round(input.maxPriceInr * 100);
-    scored = scored.filter(({ product }) => product.minPricePaise !== null && product.minPricePaise <= maxPaise);
-  }
-
-  if (input.availability === 'in_stock') {
-    scored = scored.filter(({ product }) => product.hasInStockVariant);
-  } else if (input.availability === 'enquiry_only') {
-    scored = scored.filter(({ product }) => !product.isOrderableOnline);
-  }
-
-  if (input.productType === 'edible') {
-    scored = scored.filter(({ product }) => product.isEdible);
-  } else if (input.productType === 'herbal_care') {
-    scored = scored.filter(({ product }) => !product.isEdible);
-  }
-
-  if (input.useCases && input.useCases.length > 0) {
-    const useSet = new Set(input.useCases);
-    scored = scored.filter(({ product }) => product.usageTags.some((u) => useSet.has(u)));
-  }
-
-  const sort = input.sort ?? 'relevance';
-  scored.sort((a, b) => {
-    if (sort === 'price_asc') {
-      const pa = a.product.minPricePaise ?? Number.MAX_SAFE_INTEGER;
-      const pb = b.product.minPricePaise ?? Number.MAX_SAFE_INTEGER;
-      return pa - pb || a.product.name.localeCompare(b.product.name);
-    }
-    if (sort === 'price_desc') {
-      const pa = a.product.minPricePaise ?? -1;
-      const pb = b.product.minPricePaise ?? -1;
-      return pb - pa || a.product.name.localeCompare(b.product.name);
-    }
-    if (sort === 'name_asc') {
-      return a.product.name.localeCompare(b.product.name);
-    }
-    // Relevance: query score desc, then featured order, then id
-    if (b.score !== a.score) return b.score - a.score;
-    const fa = a.product.featuredOrder ?? 999;
-    const fb = b.product.featuredOrder ?? 999;
-    return fa - fb || a.product.id - b.product.id;
-  });
-
-  const filteredProducts = scored.map((s) => s.product);
+  const filteredProducts = filterAndSortCatalogProducts(allProducts, input);
   return {
     products: filteredProducts,
+    allProducts,
+    categories: allCats,
     totalCount: filteredProducts.length,
     facets,
   };

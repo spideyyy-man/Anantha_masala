@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { X, Plus, Minus, Trash2, ShoppingBag, MessageCircle, ArrowRight } from 'lucide-react';
+import { X, Plus, Minus, Trash2, ShoppingBag, MessageCircle, ArrowRight, Truck } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useStore } from '@/components/providers/StoreProviders';
 import { formatPaiseToInr } from '@/data/brand';
@@ -11,6 +11,17 @@ import { PouchImage } from '@/components/ui/PouchImage';
 
 export function CartDrawer() {
   const { cart, cartDrawerOpen, setCartDrawerOpen, updateQuantity, trackEvent } = useStore();
+  const [updatingVariantIds, setUpdatingVariantIds] = useState<Record<number, boolean>>({});
+
+  const handleQtyChange = async (variantId: number, nextQuantity: number) => {
+    if (updatingVariantIds[variantId]) return;
+    setUpdatingVariantIds((prev) => ({ ...prev, [variantId]: true }));
+    try {
+      await updateQuantity(variantId, Math.max(0, nextQuantity));
+    } finally {
+      setUpdatingVariantIds((prev) => ({ ...prev, [variantId]: false }));
+    }
+  };
 
   useEffect(() => {
     if (!cartDrawerOpen) return;
@@ -122,82 +133,105 @@ export function CartDrawer() {
                 </div>
               ) : (
                 <ul className="space-y-4">
-                  {items.map((item) => (
-                    <li
-                      key={item.variantId}
-                      className="flex gap-3.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-canvas)]/60 p-3"
-                    >
-                      <Link
-                        href={`/products/${item.productSlug}`}
-                        onClick={() => setCartDrawerOpen(false)}
-                        className="relative h-20 w-16 shrink-0 overflow-hidden rounded-lg bg-[#F4E8D6] p-1"
+                  {items.map((item) => {
+                    const isBusy = Boolean(updatingVariantIds[item.variantId]);
+                    const maxAllowed = Math.min(25, item.stockQty || 25);
+                    return (
+                      <li
+                        key={item.variantId}
+                        aria-busy={isBusy}
+                        className={`flex gap-3.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-canvas)]/60 p-3 transition-opacity ${
+                          isBusy ? 'opacity-65' : ''
+                        }`}
                       >
-                        <PouchImage
-                          src={getCutoutUrlFromThumb(item.thumbUrl, '420')}
-                          fallbackSrc={item.thumbUrl}
-                          alt={item.productName}
-                          width={120}
-                          height={160}
-                          priority
-                          imgClassName="pouch-float-light"
-                        />
-                      </Link>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-start justify-between gap-2">
-                          <div>
-                            <Link
-                              href={`/products/${item.productSlug}`}
-                              onClick={() => setCartDrawerOpen(false)}
-                              className="text-sm font-semibold text-[var(--text-primary)] hover:text-[var(--brand-crimson)]"
+                        <Link
+                          href={`/products/${item.productSlug}`}
+                          onClick={() => setCartDrawerOpen(false)}
+                          className="relative h-20 w-16 shrink-0 overflow-hidden rounded-lg bg-[#F4E8D6] p-1"
+                        >
+                          <PouchImage
+                            src={getCutoutUrlFromThumb(item.thumbUrl, '420')}
+                            fallbackSrc={item.thumbUrl}
+                            alt={item.productName}
+                            width={120}
+                            height={160}
+                            priority
+                            imgClassName="pouch-float-light"
+                          />
+                        </Link>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <Link
+                                href={`/products/${item.productSlug}`}
+                                onClick={() => setCartDrawerOpen(false)}
+                                className="text-sm font-semibold text-[var(--text-primary)] hover:text-[var(--brand-crimson)]"
+                              >
+                                {item.productName}
+                              </Link>
+                              <p className="font-tamil text-xs text-[var(--text-muted)]">
+                                {item.tamilName}
+                              </p>
+                              <p className="mt-0.5 text-xs text-[var(--text-secondary)]">
+                                {item.variantLabel} •{' '}
+                                <span className="font-mono-num font-semibold text-[var(--text-primary)]">
+                                  {formatPaiseToInr(item.unitPricePaise)}
+                                </span>{' '}
+                                unit price
+                              </p>
+                            </div>
+                            <button
+                              type="button"
+                              disabled={isBusy}
+                              onClick={() => void handleQtyChange(item.variantId, 0)}
+                              aria-label={`Remove ${item.productName}`}
+                              className="flex h-8 w-8 items-center justify-center rounded-lg text-[var(--text-muted)] hover:bg-[var(--brand-crimson-soft)] hover:text-[var(--brand-crimson)] disabled:opacity-40"
                             >
-                              {item.productName}
-                            </Link>
-                            <p className="font-tamil text-xs text-[var(--text-muted)]">
-                              {item.tamilName}
-                            </p>
-                            <p className="mt-0.5 text-xs text-[var(--text-secondary)]">
-                              {item.variantLabel} • {formatPaiseToInr(item.unitPricePaise)} each
-                            </p>
+                              <Trash2 className="h-4 w-4" />
+                            </button>
                           </div>
-                          <button
-                            type="button"
-                            onClick={() => void updateQuantity(item.variantId, 0)}
-                            aria-label={`Remove ${item.productName}`}
-                            className="flex h-8 w-8 items-center justify-center rounded-lg text-[var(--text-muted)] hover:bg-[var(--brand-crimson-soft)] hover:text-[var(--brand-crimson)]"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </div>
 
-                        <div className="mt-2.5 flex items-center justify-between">
-                          <div className="inline-flex items-center rounded-lg border border-[var(--border-strong)] bg-[var(--bg-surface)]">
-                            <button
-                              type="button"
-                              onClick={() => void updateQuantity(item.variantId, item.quantity - 1)}
-                              aria-label={`Decrease quantity of ${item.productName}`}
-                              className="flex h-8 w-8 items-center justify-center text-[var(--text-primary)] hover:bg-[var(--bg-surface-muted)]"
+                          <div className="mt-2.5 flex items-center justify-between">
+                            <div
+                              role="group"
+                              aria-label={`Quantity controls for ${item.productName}`}
+                              className="inline-flex items-center rounded-lg border border-[var(--border-strong)] bg-[var(--bg-surface)]"
                             >
-                              <Minus className="h-3.5 w-3.5" />
-                            </button>
-                            <span className="font-mono-num min-w-8 text-center text-xs font-semibold">
-                              {item.quantity}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => void updateQuantity(item.variantId, item.quantity + 1)}
-                              aria-label={`Increase quantity of ${item.productName}`}
-                              className="flex h-8 w-8 items-center justify-center text-[var(--text-primary)] hover:bg-[var(--bg-surface-muted)]"
-                            >
-                              <Plus className="h-3.5 w-3.5" />
-                            </button>
+                              <button
+                                type="button"
+                                disabled={isBusy}
+                                onClick={() => void handleQtyChange(item.variantId, item.quantity - 1)}
+                                aria-label={`Decrease quantity of ${item.productName}`}
+                                className="flex h-8 w-8 items-center justify-center text-[var(--text-primary)] hover:bg-[var(--bg-surface-muted)] disabled:opacity-35"
+                              >
+                                <Minus className="h-3.5 w-3.5" />
+                              </button>
+                              <span className="font-mono-num min-w-8 text-center text-xs font-semibold">
+                                {item.quantity}
+                              </span>
+                              <button
+                                type="button"
+                                disabled={isBusy || item.quantity >= maxAllowed}
+                                onClick={() => void handleQtyChange(item.variantId, item.quantity + 1)}
+                                aria-label={`Increase quantity of ${item.productName}`}
+                                className="flex h-8 w-8 items-center justify-center text-[var(--text-primary)] hover:bg-[var(--bg-surface-muted)] disabled:opacity-35"
+                              >
+                                <Plus className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                            <div className="text-right">
+                              <span className="block text-[10px] font-medium uppercase tracking-wider text-[var(--text-muted)]">
+                                Item Subtotal
+                              </span>
+                              <span className="font-mono-num text-sm font-bold text-[var(--text-primary)]">
+                                {formatPaiseToInr(item.lineTotalPaise)}
+                              </span>
+                            </div>
                           </div>
-                          <span className="font-mono-num text-sm font-bold text-[var(--text-primary)]">
-                            {formatPaiseToInr(item.lineTotalPaise)}
-                          </span>
                         </div>
-                      </div>
-                    </li>
-                  ))}
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
             </div>
@@ -207,13 +241,17 @@ export function CartDrawer() {
               <div className="border-t border-[var(--border-subtle)] bg-[var(--bg-canvas)] px-5 py-4">
                 <div className="space-y-1.5 text-sm">
                   <div className="flex justify-between text-[var(--text-secondary)]">
-                    <span>Subtotal</span>
-                    <span className="font-mono-num font-medium">{formatPaiseToInr(cart.subtotalPaise)}</span>
+                    <span>Cart Subtotal ({cart.itemCount} {cart.itemCount === 1 ? 'pack' : 'packs'})</span>
+                    <span className="font-mono-num font-semibold text-[var(--text-primary)]">{formatPaiseToInr(cart.subtotalPaise)}</span>
                   </div>
                   <div className="flex justify-between text-[var(--text-secondary)]">
                     <span>Estimated Shipping (TN default)</span>
                     <span className="font-mono-num font-medium">
-                      {cart.shippingPaise === 0 ? 'FREE' : formatPaiseToInr(cart.shippingPaise)}
+                      {cart.shippingPaise === 0 ? (
+                        <strong className="text-[var(--brand-leaf)]">FREE</strong>
+                      ) : (
+                        formatPaiseToInr(cart.shippingPaise)
+                      )}
                     </span>
                   </div>
                   <div className="flex justify-between border-t border-[var(--border-subtle)] pt-2 text-base font-bold text-[var(--text-primary)]">
@@ -221,6 +259,10 @@ export function CartDrawer() {
                     <span className="font-mono-num">{formatPaiseToInr(cart.totalPaise)}</span>
                   </div>
                 </div>
+                <p className="mt-2 flex items-start gap-1.5 rounded-lg bg-[var(--bg-surface)] p-2 text-[11px] leading-snug text-[var(--text-secondary)]">
+                  <Truck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--brand-crimson)]" aria-hidden="true" />
+                  <span>{cart.shippingRegionNote}</span>
+                </p>
 
                 <div className="mt-4 flex flex-col gap-2">
                   <Link

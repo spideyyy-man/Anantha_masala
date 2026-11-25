@@ -2,7 +2,12 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { clearBootstrapCacheForTesting, ensureDbReady } from '@/db/bootstrap';
 import { resetDbForTesting } from '@/db';
 import { getProductBySlug } from '@/domain/catalog/service';
-import { addToCart, ensureCartExists, getHydratedCart } from '@/domain/cart/service';
+import {
+  addToCart,
+  ensureCartExists,
+  getHydratedCart,
+  setCartItemQuantity,
+} from '@/domain/cart/service';
 import {
   createGuestOrderFromCart,
   getOrderForCustomer,
@@ -254,5 +259,48 @@ describe('Commerce Transactions, Webhooks, Security, RBAC/MFA & DPDP Privacy', (
     expect(checkRateLimit(key, 2, 60_000).allowed).toBe(true);
     expect(checkRateLimit(key, 2, 60_000).allowed).toBe(true);
     expect(checkRateLimit(key, 2, 60_000).allowed).toBe(false);
+  });
+
+  it('supports cart quantity updates, item removal, free shipping threshold transitions, and regional shipping calculation', async () => {
+    const meen = await getProductBySlug('bhai-veetu-meen-masala');
+    const manjal = await getProductBySlug('manjal-podi');
+    expect(meen).not.toBeNull();
+    expect(manjal).not.toBeNull();
+
+    const meenVar = meen!.variants[0]!;
+    const manjalVar = manjal!.variants[0]!;
+    const meenPrice = meenVar.pricePaise!;
+    const manjalPrice = manjalVar.pricePaise!;
+
+    const cartId = await ensureCartExists();
+    await addToCart(cartId, meenVar.id, 1);
+    await addToCart(cartId, manjalVar.id, 2);
+
+    const expectedInitialSubtotal = meenPrice + 2 * manjalPrice;
+    let cart = await getHydratedCart(cartId, 'Tamil Nadu');
+    expect(cart.itemCount).toBe(3);
+    expect(cart.subtotalPaise).toBe(expectedInitialSubtotal);
+    expect(cart.shippingPaise).toBe(4900); // ₹49 TN shipping below ₹499
+    expect(cart.amountToFreeShippingPaise).toBe(49900 - expectedInitialSubtotal);
+
+    // Rest of India shipping (Karnataka) is ₹79 below ₹499
+    const karnatakaCart = await getHydratedCart(cartId, 'Karnataka');
+    expect(karnatakaCart.shippingPaise).toBe(7900);
+
+    // Update Meen Masala quantity from 1 -> 3 (exceeds ₹499 threshold -> FREE shipping)
+    await setCartItemQuantity(cartId, meenVar.id, 3);
+    cart = await getHydratedCart(cartId, 'Tamil Nadu');
+    expect(cart.itemCount).toBe(5);
+    expect(cart.subtotalPaise).toBe(3 * meenPrice + 2 * manjalPrice);
+    expect(cart.shippingPaise).toBe(0);
+    expect(cart.amountToFreeShippingPaise).toBe(0);
+
+    // Remove Manjal Podi (quantity = 0)
+    await setCartItemQuantity(cartId, manjalVar.id, 0);
+    cart = await getHydratedCart(cartId, 'Tamil Nadu');
+    expect(cart.items.length).toBe(1);
+    expect(cart.items[0]!.variantId).toBe(meenVar.id);
+    expect(cart.subtotalPaise).toBe(3 * meenPrice);
+    expect(cart.shippingPaise).toBe(0);
   });
 });

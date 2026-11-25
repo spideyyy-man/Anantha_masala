@@ -2,23 +2,23 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { ArrowRight, Pause, Play } from 'lucide-react';
-import type { CatalogProduct } from '@/domain/catalog/service';
+import { ArrowRight } from 'lucide-react';
+import type { CatalogCategorySummary, CatalogProduct } from '@/domain/catalog/service';
 import { ProductCard } from '@/components/cards/ProductCard';
 
 interface InfinitePantryShowcaseProps {
   allProducts: CatalogProduct[];
+  categories?: CatalogCategorySummary[];
 }
 
 /**
  * Part 2.2 — ONE Continuous Right-to-Left Gliding Product Showcase.
- * - Placed immediately between the Hero and Collections as a clean packaging-led visual bridge.
- * - Zero duplicate second marquee; zero verbose introductory paragraphs or decorative captions.
- * - Seamless modulo RAF wraparound, hover/focus pause, off-screen IntersectionObserver pause,
+ * - Coordinated Chapter 03 bridge connecting Food Storytelling to the complete 25-pack catalogue
+ *   and individual category routes.
+ * - Seamless modulo RAF wraparound, hover/focus deceleration, off-screen IntersectionObserver pause,
  *   touch-pan-y swipe/drag support, prefers-reduced-motion compliance, and aria-hidden clones.
  */
-export function InfinitePantryShowcase({ allProducts }: InfinitePantryShowcaseProps) {
-  const [paused, setPaused] = useState(false);
+export function InfinitePantryShowcase({ allProducts, categories = [] }: InfinitePantryShowcaseProps) {
   const [isDraggingUI, setIsDraggingUI] = useState(false);
 
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -90,7 +90,6 @@ export function InfinitePantryShowcase({ allProducts }: InfinitePantryShowcasePr
       if (loopW <= 0 || !trackRef.current) return;
 
       const shouldAutoMove =
-        !paused &&
         !hoveredRef.current &&
         !draggingRef.current &&
         !reducedMotionRef.current &&
@@ -134,7 +133,7 @@ export function InfinitePantryShowcase({ allProducts }: InfinitePantryShowcasePr
       ro.disconnect();
       mq.removeEventListener('change', onMqChange);
     };
-  }, [paused]);
+  }, []);
 
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     draggingRef.current = true;
@@ -171,45 +170,67 @@ export function InfinitePantryShowcase({ allProducts }: InfinitePantryShowcasePr
 
   return (
     <section
+      id="pantry-showcase"
       aria-labelledby="infinite-pantry-heading"
-      className="relative overflow-hidden border-b border-[var(--border-subtle)] bg-[#FBF6EE] py-10 text-[var(--text-primary)] lg:py-14"
+      className="relative overflow-hidden bg-gradient-to-b from-[#FBF6EE] via-[#F4EAD9] to-[#FBF6EE] py-14 text-[var(--text-primary)] lg:py-18"
     >
-      {/* Minimal Purposeful Bar — Products Speak for Themselves */}
-      <div className="mx-auto mb-5 flex max-w-7xl items-center justify-between gap-4 px-4 sm:px-6">
-        <h2
-          id="infinite-pantry-heading"
-          className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--brand-crimson)]"
-        >
-          Madurai Pantry • {showcaseProducts.length} Audited Packs
-        </h2>
+      {/* Chapter 03 Architectural Divider */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none mx-auto mb-7 flex max-w-7xl items-center gap-4 px-4 sm:px-6"
+      >
+        <span className="h-px flex-1 bg-gradient-to-r from-transparent via-[var(--border-strong)] to-[var(--border-subtle)]" />
+        <span className="font-tamil text-xs font-bold tracking-wide text-[var(--brand-crimson)]/85">
+          அத்தியாயம் 03 • 25 அசல் மசாலா மற்றும் மாவு வகைகள்
+        </span>
+        <span className="h-px flex-1 bg-gradient-to-l from-transparent via-[var(--border-strong)] to-[var(--border-subtle)]" />
+      </div>
 
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setPaused((p) => !p)}
-            aria-pressed={paused}
-            className="inline-flex h-9 items-center gap-1.5 rounded-full border border-[var(--border-strong)] bg-[var(--bg-surface)] px-3.5 text-xs font-semibold text-[var(--text-primary)] transition-colors hover:border-[var(--brand-crimson)] hover:text-[var(--brand-crimson)]"
-          >
-            {paused ? (
-              <>
-                <Play className="h-3.5 w-3.5" aria-hidden="true" />
-                Resume
-              </>
-            ) : (
-              <>
-                <Pause className="h-3.5 w-3.5" aria-hidden="true" />
-                Pause
-              </>
-            )}
-          </button>
-          <Link
-            href="/products"
-            className="inline-flex h-9 items-center gap-1 rounded-full bg-[var(--bg-deep)] px-4 text-xs font-semibold text-[#FBF5EC] transition-colors hover:bg-[var(--brand-crimson)]"
-          >
-            All Products
-            <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
-          </Link>
+      {/* Coordinated Chapter Header + Quick Category Jump Pills */}
+      <div className="mx-auto mb-6 max-w-7xl px-4 sm:px-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--brand-crimson)]">
+              Chapter 03 • Complete Pantry Stream • {showcaseProducts.length} Audited Packs
+            </p>
+            <h2
+              id="infinite-pantry-heading"
+              className="font-display mt-1.5 text-2xl font-bold leading-tight tracking-[-0.02em] text-[var(--text-primary)] sm:text-4xl"
+            >
+              Every Genuine Pack, Ready for Your Kitchen Shelf.
+            </h2>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Link
+              href="/products"
+              className="inline-flex min-h-[42px] items-center gap-1.5 rounded-full bg-[var(--bg-deep)] px-5 text-xs font-bold text-[#FBF5EC] transition-colors duration-200 hover:bg-[var(--brand-crimson)]"
+            >
+              Open Full Pantry ({showcaseProducts.length})
+              <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+            </Link>
+          </div>
         </div>
+
+        {categories.length > 0 && (
+          <div
+            aria-label="Browse pantry by category"
+            className="snap-rail -mx-4 mt-4 gap-2 px-4 pb-1 sm:mx-0 sm:flex-wrap sm:px-0"
+          >
+            {categories.map((cat) => (
+              <Link
+                key={cat.id}
+                href={`/categories/${cat.slug}`}
+                className="snap-rail-item inline-flex min-h-[34px] items-center gap-1.5 whitespace-nowrap rounded-full border border-[var(--border-strong)]/75 bg-[var(--bg-surface)]/90 px-3.5 text-xs font-semibold text-[var(--text-secondary)] transition-colors duration-[180ms] hover:border-[var(--brand-crimson)] hover:text-[var(--brand-crimson)]"
+              >
+                <span>{cat.name.split('&')[0]?.trim()}</span>
+                <span className="font-mono-num text-[10px] text-[var(--text-muted)]">
+                  {cat.isComingSoonOnly ? 'WA' : cat.productCount}
+                </span>
+              </Link>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Single Seamless Right-to-Left Infinite Gliding Showcase */}

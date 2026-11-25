@@ -54,6 +54,8 @@ export default async function AllProductsPage({
   return (
     <CatalogExplorer
       initialProducts={data.products}
+      allProducts={data.allProducts}
+      categories={data.categories}
       facets={data.facets}
       initialFilters={filters}
       heading="Madurai Pantry"

@@ -44,7 +44,7 @@ export function CategoryCard({ category }: { category: CatalogCategorySummary })
                 width={420}
                 height={560}
                 priority
-                imgClassName="pouch-float-light"
+                imgClassName={theme.darkSurface ? 'pouch-float-dark' : 'pouch-float-light'}
               />
             </div>
           )}

@@ -249,12 +249,19 @@ function OrderTrackInner() {
                     <div>
                       <p className="font-semibold text-[var(--text-primary)]">{it.productName}</p>
                       <p className="font-tamil text-xs text-[var(--text-muted)]">
-                        {it.tamilName} • {it.variantLabel} × {it.quantity}
+                        {it.tamilName} • {it.variantLabel} •{' '}
+                        <span className="font-mono-num">{formatPaiseToInr(it.unitPricePaise)}</span> ×{' '}
+                        <strong className="font-mono-num">{it.quantity}</strong>
                       </p>
                     </div>
-                    <span className="font-mono-num font-bold text-[var(--text-primary)]">
-                      {formatPaiseToInr(it.lineTotalPaise)}
-                    </span>
+                    <div className="text-right">
+                      <span className="block text-[10px] font-medium uppercase tracking-wider text-[var(--text-muted)]">
+                        Item Subtotal
+                      </span>
+                      <span className="font-mono-num font-bold text-[var(--text-primary)]">
+                        {formatPaiseToInr(it.lineTotalPaise)}
+                      </span>
+                    </div>
                   </li>
                 ))}
               </ul>

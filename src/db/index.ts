@@ -1,6 +1,7 @@
 import path from 'node:path';
 import fs from 'node:fs';
 import { Pool } from 'pg';
+import { attachDatabasePool } from '@vercel/functions';
 import { PGlite } from '@electric-sql/pglite';
 import type { PgDatabase, PgQueryResultHKT } from 'drizzle-orm/pg-core';
 import { drizzle as drizzlePg } from 'drizzle-orm/node-postgres';
@@ -272,11 +273,23 @@ function initConnection(): AppDatabase {
 
   const databaseUrl = process.env.DATABASE_URL;
   if (databaseUrl) {
-    const pool = new Pool({ connectionString: databaseUrl });
+    const pool = new Pool({
+      connectionString: databaseUrl,
+      max: process.env.VERCEL ? 5 : 10,
+      idleTimeoutMillis: 30_000,
+      connectionTimeoutMillis: 10_000,
+    });
     state.pool = pool;
     state.mode = 'postgres';
+    if (process.env.VERCEL) attachDatabasePool(pool);
     state.db = drizzlePg(pool, { schema });
     return state.db;
+  }
+
+  if (process.env.NODE_ENV === 'production' || process.env.VERCEL) {
+    throw new Error(
+      'DATABASE_URL is required in production. Configure a managed PostgreSQL connection; PGlite is development-only.',
+    );
   }
 
   const dataDir =

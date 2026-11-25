@@ -147,8 +147,8 @@ export async function runBootstrap(forceReseed = false): Promise<void> {
             avifUrl: urls.avifUrl,
             altText:
               idx === 0
-                ? `${prod.name} (${prod.tamilName}) front packaging pouch — Madurai Aanandha Masala`
-                : `${prod.name} (${prod.tamilName}) alternate packaging view — Madurai Aanandha Masala`,
+                ? `${prod.name} (${prod.tamilName}) front packaging pouch â€” Madurai Aanandha Masala`
+                : `${prod.name} (${prod.tamilName}) alternate packaging view â€” Madurai Aanandha Masala`,
             isPrimary: idx === 0,
             sortOrder: idx,
           });
@@ -161,7 +161,8 @@ export async function runBootstrap(forceReseed = false): Promise<void> {
   const existingAdmin = await db.select({ id: adminUsers.id }).from(adminUsers).limit(1);
   if (existingAdmin.length === 0) {
     const email = (process.env.ADMIN_BOOTSTRAP_EMAIL || 'admin@aanandhamasala.in').toLowerCase();
-    const defaultDevPassword = process.env.ADMIN_BOOTSTRAP_PASSWORD || 'MaduraiAdmin#2026!';
+    const defaultDevPassword = process.env.ADMIN_BOOTSTRAP_PASSWORD || (process.env.NODE_ENV === 'production' ? undefined : 'MaduraiAdmin#2026!');
+    if (!defaultDevPassword) throw new Error('ADMIN_BOOTSTRAP_PASSWORD is required to create the first production admin account.');
     await db
       .insert(adminUsers)
       .values({

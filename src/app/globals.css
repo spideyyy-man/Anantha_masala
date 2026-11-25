@@ -165,11 +165,11 @@ body {
   animation: pouch-breathe 5.8s ease-in-out infinite;
 }
 
-/* Deterministic interruptible hero carousel transitions (zero mode="wait" deadlock) */
-@keyframes hero-pouch-from-right {
+/* Cinematic dual-layer Hero scene transitions (1.35s slow-in/slow-out, 100% interruptible) */
+@keyframes hero-pouch-enter-next {
   0% {
-    opacity: 0.25;
-    transform: translate3d(54px, 14px, 0) scale(0.92) rotate(3deg);
+    opacity: 0;
+    transform: translate3d(105px, 24px, 0) scale(0.88) rotate(4deg);
   }
   100% {
     opacity: 1;
@@ -177,10 +177,21 @@ body {
   }
 }
 
-@keyframes hero-pouch-from-left {
+@keyframes hero-pouch-exit-next {
   0% {
-    opacity: 0.25;
-    transform: translate3d(-54px, 14px, 0) scale(0.92) rotate(-3deg);
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1) rotate(0deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(-105px, -18px, 0) scale(0.86) rotate(-4deg);
+  }
+}
+
+@keyframes hero-pouch-enter-prev {
+  0% {
+    opacity: 0;
+    transform: translate3d(-105px, 24px, 0) scale(0.88) rotate(-4deg);
   }
   100% {
     opacity: 1;
@@ -188,14 +199,89 @@ body {
   }
 }
 
-@keyframes hero-copy-reveal {
+@keyframes hero-pouch-exit-prev {
   0% {
-    opacity: 0.35;
-    transform: translate3d(0, 12px, 0);
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1) rotate(0deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(105px, -18px, 0) scale(0.86) rotate(4deg);
+  }
+}
+
+@keyframes hero-text-enter {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 22px, 0);
   }
   100% {
     opacity: 1;
     transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes hero-text-exit {
+  0% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(0, -16px, 0);
+  }
+}
+
+@keyframes hero-watermark-enter-next {
+  0% {
+    opacity: 0;
+    transform: translate3d(72px, 0, 0) scale(0.97);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes hero-watermark-exit-next {
+  0% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(-72px, 0, 0) scale(1.03);
+  }
+}
+
+@keyframes hero-watermark-enter-prev {
+  0% {
+    opacity: 0;
+    transform: translate3d(-72px, 0, 0) scale(0.97);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes hero-watermark-exit-prev {
+  0% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(72px, 0, 0) scale(1.03);
+  }
+}
+
+@keyframes hero-progress-fill {
+  0% {
+    transform: scaleX(0);
+  }
+  100% {
+    transform: scaleX(1);
   }
 }
 
@@ -221,24 +307,133 @@ body {
   }
 }
 
-.animate-hero-from-right {
-  animation: hero-pouch-from-right 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+.animate-hero-pouch-enter-next {
+  animation: hero-pouch-enter-next 1350ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
-
-.animate-hero-from-left {
-  animation: hero-pouch-from-left 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+.animate-hero-pouch-exit-next {
+  animation: hero-pouch-exit-next 1100ms cubic-bezier(0.4, 0, 0.2, 1) both;
 }
-
-.animate-hero-copy {
-  animation: hero-copy-reveal 360ms cubic-bezier(0.16, 1, 0.3, 1) both;
+.animate-hero-pouch-enter-prev {
+  animation: hero-pouch-enter-prev 1350ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.animate-hero-pouch-exit-prev {
+  animation: hero-pouch-exit-prev 1100ms cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+.animate-hero-text-enter {
+  animation: hero-text-enter 1100ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.animate-hero-text-exit {
+  animation: hero-text-exit 650ms cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+.animate-hero-wm-enter-next {
+  animation: hero-watermark-enter-next 1400ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.animate-hero-wm-exit-next {
+  animation: hero-watermark-exit-next 1150ms cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+.animate-hero-wm-enter-prev {
+  animation: hero-watermark-enter-prev 1400ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.animate-hero-wm-exit-prev {
+  animation: hero-watermark-exit-prev 1150ms cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+.animate-hero-progress {
+  transform-origin: left center;
+  animation: hero-progress-fill 2500ms linear both;
 }
 
 .animate-stage-enter {
-  animation: aanandha-stage-enter 260ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: aanandha-stage-enter 280ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .animate-heading-reveal {
-  animation: heading-line-in 440ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: heading-line-in 230ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Connected Collection Page Choreographed Arrival (Card -> Hero Stage, Pouches, Title & Grid) */
+@keyframes collection-stage-expand {
+  0% {
+    opacity: 0.72;
+    transform: translate3d(0, 18px, 0) scale(0.965);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes collection-pouch-center-in {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 26px, 0) scale(0.86) rotate(0deg);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1) rotate(2deg);
+  }
+}
+
+@keyframes collection-pouch-left-in {
+  0% {
+    opacity: 0;
+    transform: translate3d(28px, 24px, 0) scale(0.82) rotate(0deg);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1) rotate(-10deg);
+  }
+}
+
+@keyframes collection-pouch-right-in {
+  0% {
+    opacity: 0;
+    transform: translate3d(-28px, 24px, 0) scale(0.82) rotate(0deg);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1) rotate(10deg);
+  }
+}
+
+@keyframes collection-copy-in {
+  0% {
+    opacity: 0;
+    transform: translate3d(-14px, 10px, 0);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes collection-grid-in {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 18px, 0) scale(0.985);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+.animate-collection-stage {
+  animation: collection-stage-expand 300ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.animate-collection-pouch-center {
+  animation: collection-pouch-center-in 440ms cubic-bezier(0.22, 1, 0.36, 1) 40ms both;
+}
+.animate-collection-pouch-left {
+  animation: collection-pouch-left-in 460ms cubic-bezier(0.22, 1, 0.36, 1) 90ms both;
+}
+.animate-collection-pouch-right {
+  animation: collection-pouch-right-in 460ms cubic-bezier(0.22, 1, 0.36, 1) 120ms both;
+}
+.animate-collection-copy {
+  animation: collection-copy-in 230ms cubic-bezier(0.22, 1, 0.36, 1) 40ms both;
+}
+.animate-collection-grid {
+  animation: collection-grid-in 320ms cubic-bezier(0.22, 1, 0.36, 1) 110ms both;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -246,11 +441,25 @@ body {
     scroll-behavior: auto;
   }
   .animate-pouch-breathe,
-  .animate-hero-from-right,
-  .animate-hero-from-left,
-  .animate-hero-copy,
+  .animate-hero-pouch-enter-next,
+  .animate-hero-pouch-exit-next,
+  .animate-hero-pouch-enter-prev,
+  .animate-hero-pouch-exit-prev,
+  .animate-hero-text-enter,
+  .animate-hero-text-exit,
+  .animate-hero-wm-enter-next,
+  .animate-hero-wm-exit-next,
+  .animate-hero-wm-enter-prev,
+  .animate-hero-wm-exit-prev,
+  .animate-hero-progress,
   .animate-stage-enter,
-  .animate-heading-reveal {
+  .animate-heading-reveal,
+  .animate-collection-stage,
+  .animate-collection-pouch-center,
+  .animate-collection-pouch-left,
+  .animate-collection-pouch-right,
+  .animate-collection-copy,
+  .animate-collection-grid {
     animation: none;
   }
   *,
