@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { startTransition, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Search,
   X,
@@ -15,7 +15,6 @@ import type { CatalogFilterInput, CatalogProduct } from '@/domain/catalog/servic
 import { filterAndSortCatalogProducts } from '@/domain/catalog/filter';
 import { BRAND, buildWhatsAppUrl } from '@/data/brand';
 import { ProductCard } from '@/components/cards/ProductCard';
-import { ProductGridSkeleton } from './CatalogExplorer';
 
 interface CategoryCollectionCatalogProps {
   categorySlug: string;
@@ -35,7 +34,7 @@ const SORT_LABELS: Record<NonNullable<CatalogFilterInput['sort']>, string> = {
  * - Instant client-side filtering & sorting with zero page reloads or vertical layout jumps.
  * - Visually obvious active filter chips with individual removal + one-click Reset Filters.
  * - Preserves filter & sort state in URL query parameters (`history.replaceState`) and `sessionStorage`.
- * - Includes polished empty-results and loading states.
+ * - Includes a polished empty-results state without artificial loading delays.
  */
 export function CategoryCollectionCatalog({
   categorySlug,
@@ -49,8 +48,6 @@ export function CategoryCollectionCatalog({
   const [sort, setSort] = useState<'relevance' | 'price_asc' | 'price_desc' | 'name_asc'>(
     'relevance'
   );
-  const [loading, setLoading] = useState(false);
-
   const storageKey = `aanandha_collection_filters_${categorySlug}`;
 
   // Derive valid pack sizes and usage tags strictly from this collection's verified products
@@ -93,12 +90,6 @@ export function CategoryCollectionCatalog({
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const sp = new URLSearchParams(window.location.search);
-    if (sp.get('loading') === '1') {
-      setLoading(true);
-      const t = window.setTimeout(() => setLoading(false), 550);
-      return () => window.clearTimeout(t);
-    }
-
     const sourceParams =
       Array.from(sp.keys()).length > 0
         ? sp
@@ -111,23 +102,26 @@ export function CategoryCollectionCatalog({
             }
           })();
 
-    if (sourceParams.get('q')) setQ(sourceParams.get('q')!);
-    if (sourceParams.get('size')) {
-      setSelectedSizes(
-        sourceParams
-          .get('size')!
-          .split(',')
-          .map(Number)
-          .filter((n) => Number.isFinite(n) && n > 0)
-      );
-    }
-    if (sourceParams.get('use')) {
-      setSelectedUseCases(sourceParams.get('use')!.split(',').filter(Boolean));
-    }
-    const av = sourceParams.get('availability');
-    if (av === 'in_stock' || av === 'enquiry_only') setAvailability(av);
-    const sr = sourceParams.get('sort');
-    if (sr === 'price_asc' || sr === 'price_desc' || sr === 'name_asc') setSort(sr);
+    const restoredQuery = sourceParams.get('q');
+    const restoredSizes = sourceParams.get('size')
+      ?.split(',')
+      .map(Number)
+      .filter((n) => Number.isFinite(n) && n > 0);
+    const restoredUseCases = sourceParams.get('use')?.split(',').filter(Boolean);
+    const restoredAvailability = sourceParams.get('availability');
+    const restoredSort = sourceParams.get('sort');
+
+    startTransition(() => {
+      if (restoredQuery) setQ(restoredQuery);
+      if (restoredSizes?.length) setSelectedSizes(restoredSizes);
+      if (restoredUseCases?.length) setSelectedUseCases(restoredUseCases);
+      if (restoredAvailability === 'in_stock' || restoredAvailability === 'enquiry_only') {
+        setAvailability(restoredAvailability);
+      }
+      if (restoredSort === 'price_asc' || restoredSort === 'price_desc' || restoredSort === 'name_asc') {
+        setSort(restoredSort);
+      }
+    });
     return undefined;
   }, [storageKey]);
 
@@ -141,10 +135,10 @@ export function CategoryCollectionCatalog({
     return sp.toString();
   }, [q, selectedSizes, selectedUseCases, availability, sort]);
 
-  const [mounted, setMounted] = useState(false);
+  const hasHydrated = useRef(false);
   useEffect(() => {
-    if (!mounted) {
-      setMounted(true);
+    if (!hasHydrated.current) {
+      hasHydrated.current = true;
       return;
     }
     if (typeof window === 'undefined') return;
@@ -162,7 +156,7 @@ export function CategoryCollectionCatalog({
     } catch {
       // Ignore storage error
     }
-  }, [queryString, categorySlug, mounted, storageKey]);
+  }, [queryString, categorySlug, storageKey]);
 
   const filteredProducts = useMemo(() => {
     return filterAndSortCatalogProducts(initialProducts, {
@@ -427,10 +421,8 @@ export function CategoryCollectionCatalog({
         )}
       </div>
 
-      {/* Product Grid / Loading Skeleton / Polished Empty State */}
-      {loading ? (
-        <ProductGridSkeleton count={4} columns={4} />
-      ) : filteredProducts.length === 0 ? (
+      {/* Product Grid / Polished Empty State */}
+      {filteredProducts.length === 0 ? (
         <div
           data-collection-empty="true"
           className="flex min-h-[360px] flex-col items-center justify-center rounded-3xl border border-[var(--border-strong)] bg-[var(--bg-surface)] p-8 text-center shadow-xs"
