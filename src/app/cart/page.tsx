@@ -284,7 +284,7 @@ export default function CartPage() {
                   href="/checkout"
                   className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-[var(--brand-crimson)] px-5 text-sm font-semibold text-white hover:bg-[var(--brand-crimson-hover)]"
                 >
-                  Proceed to Guest Checkout
+                  Continue with WhatsApp Order
                   <ArrowRight className="h-4 w-4" aria-hidden="true" />
                 </Link>
                 <a
@@ -298,8 +298,7 @@ export default function CartPage() {
                   Send Bag via WhatsApp Enquiry
                 </a>
                 <p className="text-[11px] leading-snug text-[var(--text-muted)]">
-                  Sending a WhatsApp message starts an enquiry and is not a confirmed order or
-                  payment until confirmed by Madurai Aanandha Masala.
+                  Your WhatsApp message is an order request. Our team will confirm availability, delivery and final total.
                 </p>
               </div>
 

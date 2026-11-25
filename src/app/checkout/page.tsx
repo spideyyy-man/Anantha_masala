@@ -2,20 +2,14 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import {
   ShieldCheck,
   AlertCircle,
-  CheckCircle2,
-  Clock,
-  XCircle,
   MessageCircle,
-  Lock,
   Truck,
 } from 'lucide-react';
 import { useStore } from '@/components/providers/StoreProviders';
-import { BRAND, formatPaiseToInr } from '@/data/brand';
-import type { CreatedOrderResponse } from '@/domain/orders/service';
+import { BRAND, buildWhatsAppUrl, formatPaiseToInr } from '@/data/brand';
 import { getCutoutUrlFromThumb } from '@/lib/media';
 import { PouchImage } from '@/components/ui/PouchImage';
 
@@ -33,20 +27,8 @@ const INDIAN_STATES = [
   'Other Indian State / UT',
 ];
 
-function getOrCreateIdempotencyKey(): string {
-  if (typeof window === 'undefined') return `idem_${Date.now()}`;
-  const existing = sessionStorage.getItem('am_checkout_idem_key');
-  if (existing && existing.length >= 16) return existing;
-  const created =
-    typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
-      ? `idem_${crypto.randomUUID()}`
-      : `idem_${Date.now()}_${Math.random().toString(36).slice(2, 12)}`;
-  sessionStorage.setItem('am_checkout_idem_key', created);
-  return created;
-}
 
 export default function CheckoutPage() {
-  const router = useRouter();
   const { cart, cartLoading, refreshCart, trackEvent } = useStore();
   const errorSummaryRef = useRef<HTMLDivElement>(null);
 
@@ -63,9 +45,6 @@ export default function CheckoutPage() {
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
-  const [createdOrder, setCreatedOrder] = useState<CreatedOrderResponse | null>(null);
-  const [paymentBusy, setPaymentBusy] = useState(false);
-  const [paymentMessage, setPaymentMessage] = useState<string | null>(null);
 
   useEffect(() => {
     trackEvent({ eventName: 'begin_checkout', valuePaise: cart?.totalPaise });
@@ -109,9 +88,9 @@ export default function CheckoutPage() {
     return errs;
   };
 
-  const handleSubmitOrder = async (e: React.FormEvent) => {
+  const handleSubmitOrder = (e: React.FormEvent) => {
     e.preventDefault();
-    if (submitting) return;
+    if (submitting || !cart || cart.items.length === 0) return;
     setFormError(null);
     setFieldErrors({});
 
@@ -119,215 +98,62 @@ export default function CheckoutPage() {
     if (Object.keys(clientErrs).length > 0) {
       setFieldErrors(clientErrs);
       setFormError('Please correct the highlighted delivery fields below before continuing.');
-      window.setTimeout(() => {
-        errorSummaryRef.current?.focus();
-      }, 20);
+      window.setTimeout(() => errorSummaryRef.current?.focus(), 20);
       return;
     }
 
+    const message = [
+      '*New order enquiry - Madurai Aanandha Masala*',
+      '',
+      '*Customer details*',
+      'Name: ' + customerName.trim(),
+      'Phone: ' + customerPhone.trim(),
+      customerEmail.trim() ? 'Email: ' + customerEmail.trim() : null,
+      '',
+      '*Delivery address*',
+      shippingAddressLine1.trim(),
+      shippingAddressLine2.trim() || null,
+      shippingCity.trim() + ', ' + shippingState,
+      'Pincode: ' + shippingPincode.trim(),
+      deliveryNotes.trim() ? 'Delivery note: ' + deliveryNotes.trim() : null,
+      '',
+      '*Items requested*',
+      ...cart.items.map((item, index) =>
+        (index + 1) + '. ' + item.productName + ' / ' + item.variantLabel +
+        ' x ' + item.quantity + ' = ' + formatPaiseToInr(item.lineTotalPaise)
+      ),
+      '',
+      'Subtotal: ' + formatPaiseToInr(cart.subtotalPaise),
+      'Shipping estimate (' + shippingState + '): ' +
+        (cart.shippingPaise === 0 ? 'FREE' : formatPaiseToInr(cart.shippingPaise)),
+      '*Estimated total: ' + formatPaiseToInr(cart.totalPaise) + '*',
+      '',
+      'Please confirm product availability, final shipping charge and order total. I understand this is an enquiry, not a confirmed order. No online payment has been made.',
+    ].filter(Boolean).join('\n');
+
+    const link = document.createElement('a');
+    link.href = buildWhatsAppUrl(message);
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    link.click();
+    trackEvent({ eventName: 'whatsapp_click', path: '/checkout' });
     setSubmitting(true);
-
-    let utm: { utmSource?: string; utmMedium?: string; utmCampaign?: string } = {};
-    try {
-      const raw = sessionStorage.getItem('am_campaign_utm_v1');
-      if (raw) utm = JSON.parse(raw);
-    } catch {
-      // ignore
-    }
-
-    try {
-      const res = await fetch('/api/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          idempotencyKey: getOrCreateIdempotencyKey(),
-          customerName,
-          customerPhone,
-          customerEmail,
-          shippingAddressLine1,
-          shippingAddressLine2,
-          shippingCity,
-          shippingState,
-          shippingPincode,
-          deliveryNotes,
-          ...utm,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setFormError(data.error || 'Could not create order. Please review your details.');
-        if (data.fieldErrors) setFieldErrors(data.fieldErrors);
-        errorSummaryRef.current?.focus();
-        setSubmitting(false);
-        return;
-      }
-
-      const orderRes = data as CreatedOrderResponse;
-      setCreatedOrder(orderRes);
-      sessionStorage.removeItem('am_checkout_idem_key');
-      sessionStorage.setItem(
-        'am_last_order',
-        JSON.stringify({ orderNumber: orderRes.orderNumber, phone: customerPhone })
-      );
-      trackEvent({ eventName: 'payment_attempt', valuePaise: orderRes.totalPaise });
-      await refreshCart(shippingState);
-    } catch {
-      setFormError('Network failure while creating order. Your cart is preserved — please retry.');
-    } finally {
-      setSubmitting(false);
-    }
+    window.setTimeout(() => setSubmitting(false), 1200);
   };
-
-  const handleSandboxOutcome = async (outcome: 'captured' | 'pending' | 'failed') => {
-    if (!createdOrder || paymentBusy) return;
-    setPaymentBusy(true);
-    setPaymentMessage(null);
-    try {
-      const res = await fetch('/api/payments/sandbox', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          orderNumber: createdOrder.orderNumber,
-          outcome,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setPaymentMessage(data.error || 'Sandbox webhook call failed.');
-        setPaymentBusy(false);
-        return;
-      }
-
-      if (outcome === 'captured') {
-        trackEvent({ eventName: 'purchase', valuePaise: createdOrder.totalPaise });
-      }
-      router.push(
-        `/orders/track?order=${encodeURIComponent(createdOrder.orderNumber)}&status=${outcome}`
-      );
-    } catch {
-      setPaymentMessage('Network error during payment verification. You can safely retry.');
-      setPaymentBusy(false);
-    }
-  };
-
-  if (createdOrder) {
-    return (
-      <div className="mx-auto max-w-2xl px-4 py-12 sm:px-6">
-        <div className="rounded-3xl border border-[var(--border-strong)] bg-[var(--bg-surface)] p-6 shadow-md sm:p-8">
-          <div className="inline-flex items-center gap-2 rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-950">
-            <Lock className="h-3.5 w-3.5" aria-hidden="true" />
-            {createdOrder.paymentOrder.mode === 'sandbox'
-              ? 'SANDBOX TEST MODE — NO REAL PAYMENT CHARGED'
-              : 'HOSTED PAYMENT GATEWAY READY'}
-          </div>
-
-          <h1 className="font-display mt-4 text-2xl font-bold text-[var(--text-primary)] sm:text-3xl">
-            Complete Payment for Order{' '}
-            <span className="font-mono-num text-[var(--brand-crimson)]">
-              {createdOrder.orderNumber}
-            </span>
-          </h1>
-          <p className="mt-2 text-sm text-[var(--text-secondary)]">
-            Order total verified server-side:{' '}
-            <strong className="font-mono-num text-[var(--text-primary)]">
-              {formatPaiseToInr(createdOrder.totalPaise)}
-            </strong>{' '}
-            (Subtotal {formatPaiseToInr(createdOrder.subtotalPaise)} + Shipping{' '}
-            {createdOrder.shippingPaise === 0
-              ? 'FREE'
-              : formatPaiseToInr(createdOrder.shippingPaise)}
-            ).
-          </p>
-
-          {createdOrder.reusedIdempotent && (
-            <p className="mt-3 rounded-xl bg-[var(--brand-leaf-soft)] p-3 text-xs font-medium text-[var(--brand-leaf)]">
-              Duplicate submit detected and safely prevented — continuing your existing order.
-            </p>
-          )}
-
-          {createdOrder.paymentOrder.mode === 'sandbox' ? (
-            <div className="mt-6 space-y-3 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-canvas)] p-5">
-              <h2 className="text-sm font-bold text-[var(--text-primary)]">
-                Verify Server-Signed Payment Webhook (Sandbox)
-              </h2>
-              <p className="text-xs leading-relaxed text-[var(--text-secondary)]">
-                Live Razorpay merchant keys are not configured yet. Choose an outcome below to
-                dispatch a genuine HMAC-SHA256 signed webhook to{' '}
-                <code className="rounded bg-white px-1 py-0.5">/api/webhooks/payments</code> and
-                test order status transitions:
-              </p>
-
-              {paymentMessage && (
-                <p role="alert" className="rounded-lg bg-red-50 p-2.5 text-xs text-red-800">
-                  {paymentMessage}
-                </p>
-              )}
-
-              <div className="grid grid-cols-1 gap-2.5 pt-2 sm:grid-cols-3">
-                <button
-                  type="button"
-                  disabled={paymentBusy}
-                  onClick={() => void handleSandboxOutcome('captured')}
-                  className="flex min-h-[48px] items-center justify-center gap-1.5 rounded-xl bg-[var(--brand-leaf)] px-4 text-xs font-semibold text-white hover:opacity-95 disabled:opacity-60"
-                >
-                  <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
-                  Simulate Paid
-                </button>
-                <button
-                  type="button"
-                  disabled={paymentBusy}
-                  onClick={() => void handleSandboxOutcome('pending')}
-                  className="flex min-h-[48px] items-center justify-center gap-1.5 rounded-xl border border-amber-700 bg-amber-50 px-4 text-xs font-semibold text-amber-950 hover:bg-amber-100 disabled:opacity-60"
-                >
-                  <Clock className="h-4 w-4" aria-hidden="true" />
-                  Simulate Pending
-                </button>
-                <button
-                  type="button"
-                  disabled={paymentBusy}
-                  onClick={() => void handleSandboxOutcome('failed')}
-                  className="flex min-h-[48px] items-center justify-center gap-1.5 rounded-xl border border-red-700 bg-red-50 px-4 text-xs font-semibold text-red-900 hover:bg-red-100 disabled:opacity-60"
-                >
-                  <XCircle className="h-4 w-4" aria-hidden="true" />
-                  Simulate Failed
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="mt-6 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-canvas)] p-5 text-sm">
-              <p>
-                Provider Order ID:{' '}
-                <strong className="font-mono-num">{createdOrder.paymentOrder.providerOrderId}</strong>
-              </p>
-              <p className="mt-1 text-xs text-[var(--text-secondary)]">
-                Complete payment in the hosted Razorpay window; confirmation updates strictly via
-                verified server webhook.
-              </p>
-            </div>
-          )}
-
-          <p className="mt-5 text-xs text-[var(--text-muted)]">
-            Need help? Call or WhatsApp {BRAND.phoneDisplay} with your Order ID{' '}
-            <strong className="font-mono-num">{createdOrder.orderNumber}</strong>.
-          </p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:py-12">
       <nav aria-label="Breadcrumb" className="text-xs text-[var(--text-muted)]">
         <Link href="/cart" className="hover:text-[var(--brand-crimson)]">Shopping Bag</Link>
         <span className="mx-2">/</span>
-        <span className="font-semibold text-[var(--text-primary)]">Guest Checkout</span>
+        <span className="font-semibold text-[var(--text-primary)]">WhatsApp Order Request</span>
       </nav>
 
       <h1 className="font-display mt-3 text-3xl font-bold text-[var(--text-primary)] sm:text-4xl">
-        Guest Checkout
+        WhatsApp Order Request
       </h1>
       <p className="mt-1 text-sm text-[var(--text-secondary)]">
-        Fast, account-free checkout. We only collect details needed to dispatch your order from Madurai.
+        Send your order request directly to our team on WhatsApp. We will confirm availability and delivery before accepting the order.
       </p>
 
       {cartLoading ? (
@@ -349,7 +175,7 @@ export default function CheckoutPage() {
         </div>
       ) : (
         <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-12">
-          {/* Guest Checkout Form */}
+          {/* WhatsApp Order Details */}
           <form onSubmit={handleSubmitOrder} noValidate className="space-y-6 lg:col-span-7">
             {formError && (
               <div
@@ -431,7 +257,7 @@ export default function CheckoutPage() {
 
                 <div>
                   <label htmlFor="chk-email" className="block text-xs font-semibold text-[var(--text-primary)]">
-                    Email (Optional, for receipt)
+                    Email (Optional)
                   </label>
                   <input
                     id="chk-email"
@@ -600,10 +426,10 @@ export default function CheckoutPage() {
               aria-busy={submitting}
               className="flex min-h-[52px] w-full items-center justify-center gap-2 rounded-xl bg-[var(--brand-crimson)] px-6 text-base font-semibold text-white shadow-md hover:bg-[var(--brand-crimson-hover)] disabled:opacity-60"
             >
-              <Lock className="h-4 w-4" aria-hidden="true" />
+              <MessageCircle className="h-4 w-4" aria-hidden="true" />
               {submitting
-                ? 'Creating Server-Verified Order...'
-                : `Continue to Payment (${formatPaiseToInr(cart.totalPaise)})`}
+                ? 'Opening WhatsApp...'
+                : `Send Order on WhatsApp (${formatPaiseToInr(cart.totalPaise)})`}
             </button>
 
             <p className="text-xs leading-relaxed text-[var(--text-muted)]">
@@ -686,7 +512,7 @@ export default function CheckoutPage() {
                 </dd>
               </div>
               <div className="flex justify-between border-t border-[var(--border-subtle)] pt-2.5 text-base font-bold text-[var(--text-primary)]">
-                <dt>Total Payable</dt>
+                <dt>Estimated Total</dt>
                 <dd className="font-mono-num">{formatPaiseToInr(cart.totalPaise)}</dd>
               </div>
             </dl>
@@ -699,7 +525,7 @@ export default function CheckoutPage() {
             <div className="mt-5 rounded-xl bg-[var(--bg-canvas)] p-3.5 text-xs text-[var(--text-secondary)]">
               <p className="flex items-center gap-1.5 font-semibold text-[var(--brand-leaf)]">
                 <ShieldCheck className="h-4 w-4 shrink-0" aria-hidden="true" />
-                Protected Checkout Architecture
+                WhatsApp-first ordering
               </p>
               <p className="mt-1">
                 Prices and stock are re-verified on the server. Card/UPI details are tokenized by
@@ -709,7 +535,7 @@ export default function CheckoutPage() {
 
             <div className="mt-4 border-t border-[var(--border-subtle)] pt-4">
               <p className="text-xs font-semibold text-[var(--text-primary)]">
-                Prefer to ask before paying?
+                WhatsApp order assistance
               </p>
               <a
                 href={cart.whatsappEnquiryUrl}
@@ -721,7 +547,7 @@ export default function CheckoutPage() {
                 Send Cart Summary on WhatsApp
               </a>
               <p className="mt-1.5 text-[11px] text-[var(--text-muted)]">
-                WhatsApp enquiry does not confirm an order or payment until our team replies.
+Your request is sent to our team for confirmation. No order is confirmed and no payment is taken on this website.
               </p>
             </div>
           </aside>
