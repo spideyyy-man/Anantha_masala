@@ -4,7 +4,7 @@ import { BRAND } from '@/data/brand';
 
 export const metadata: Metadata = {
   title: 'Terms of Use',
-  description: 'Storefront terms of use, order verification rules, and disclaimers for Madurai Aanandha Masala.',
+  description: 'Storefront terms of use, WhatsApp order confirmation rules, and disclaimers for Madurai Anantha Masala.',
 };
 
 export default function TermsPage() {
@@ -26,10 +26,11 @@ export default function TermsPage() {
             1. Orders & Pricing Integrity
           </h2>
           <p className="mt-2">
-            All product prices, pack quantities, and shipping totals are computed authoritatively on
-            the server in Indian Rupees (INR). An online order is confirmed only after payment
-            verification via server-side gateway confirmation. Initiating a WhatsApp enquiry never
-            constitutes a confirmed order or payment until explicitly confirmed by {BRAND.fullName}.
+            All product prices, pack quantities, and shipping estimates are displayed in Indian
+            Rupees (INR). Orders are currently accepted via WhatsApp order request only — no online
+            payment is collected on this website. Sending a WhatsApp message initiates an order
+            enquiry and does not constitute a confirmed order until availability, shipping, and the
+            final total are explicitly confirmed by {BRAND.fullName}.
           </p>
         </section>
 
@@ -47,11 +48,12 @@ export default function TermsPage() {
 
         <section>
           <h2 className="font-display text-lg font-bold text-[var(--text-primary)]">
-            3. Sandbox Notice
+            3. Direct WhatsApp Ordering Notice
           </h2>
           <p className="mt-2">
-            When payment gateway credentials are not live, checkout runs in clearly labelled Sandbox
-            Test Mode where no real financial charge occurs.
+            Online payment gateways are currently disabled. All order confirmations, payment
+            instructions, and dispatch updates are handled directly through our official WhatsApp
+            number ({BRAND.phoneDisplay}).
           </p>
         </section>
       </div>

@@ -1,11 +1,11 @@
 export const BRAND = {
-  /** Provisional on-site spelling matching product packaging; social profiles use "Anantha". */
-  name: 'Aanandha Masala',
-  fullName: 'Madurai Aanandha Masala',
+  /** Confirmed brand name: Madurai Anantha Masala. */
+  name: 'Anantha Masala',
+  fullName: 'Madurai Anantha Masala',
   tamilName: 'மதுரை ஆனந்தா மசாலா',
   socialProfileName: 'Madurai Anantha Masala',
   spellingDiscrepancyNote:
-    'Product packaging prints "Madurai Aanandha Masala"; social profiles use "Madurai Anantha Masala" (@madurai_anantha_masala). Provisional on-site spelling follows product packaging pending owner confirmation.',
+    'Official brand name is "Madurai Anantha Masala" (@madurai_anantha_masala); some earlier packaging labels print "Aanandha".',
   tagline: 'Tradition, in Motion.',
   positioning: 'Traditional South Indian Food for Everyday Living.',
   city: 'Madurai',
@@ -22,7 +22,7 @@ export const BRAND = {
     'Meenakshi Nagar, Aruppukottai Main Road, Villapuram, Madurai - 625012, Tamil Nadu, India',
   /** Printed on packaging labels; verify validity and scope on FSSAI FoSCoS before launch. */
   printedFssaiNumber: '12423012000494',
-  legalEntityStatus: 'Pending business verification (Provisional trading name: Madurai Aanandha Masala)',
+  legalEntityStatus: 'Pending business verification (Trading name: Madurai Anantha Masala)',
   gstinStatus: 'Pending business verification',
   grievanceOfficerStatus: 'Pending appointment & contact confirmation before production launch',
   supportEmailPlaceholder: 'Pending official business domain email confirmation (contact +91 98438 87337)',
@@ -138,7 +138,7 @@ export const KITCHEN_INSPIRATIONS = [
     title: 'Traditional Ulundhu Kali with Eight Heritage Grains',
     tamilTitle: 'பாரம்பரிய உளுந்து களி தயாரிப்பு',
     summary:
-      'Prepared from Madurai Aanandha Ulundhu Kali Maavu — whose front label declares Black Urad Dal blended with Karuppu Kavuni, Sivappu Kavuni, Mappillai Samba, Poongar, Kattuyanam, Matta, and Karunguruvai rice.',
+      'Prepared from Madurai Anantha Ulundhu Kali Maavu — whose front label declares Black Urad Dal blended with Karuppu Kavuni, Sivappu Kavuni, Mappillai Samba, Poongar, Kattuyanam, Matta, and Karunguruvai rice.',
     usageBasis: 'Ingredients verified on front label (Assets/22.jpg); standard traditional kali preparation',
     steps: [
       'Whisk Ulundhu Kali Maavu with water into a smooth, lump-free batter before placing on low heat.',

@@ -236,7 +236,7 @@ export function InfinitePantryShowcase({ allProducts, categories = [] }: Infinit
       {/* Single Seamless Right-to-Left Infinite Gliding Showcase */}
       <div
         ref={viewportRef}
-        aria-label="Continuous gliding showcase of Madurai Aanandha Masala pouches"
+        aria-label="Continuous gliding showcase of Madurai Anantha Masala pouches"
         data-infinite-track="left"
         onMouseEnter={() => {
           hoveredRef.current = true;

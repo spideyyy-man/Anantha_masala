@@ -45,7 +45,7 @@ export const metadata: Metadata = {
     template: `%s | ${BRAND.fullName}`,
   },
   description:
-    'Madurai Aanandha Masala: authentic South Indian masalas, traditional idli podis, heritage rice flours, millet dosa mixes, and kanji mixes from Madurai, Tamil Nadu.',
+    'Madurai Anantha Masala: authentic South Indian masalas, traditional idli podis, heritage rice flours, millet dosa mixes, and kanji mixes from Madurai, Tamil Nadu.',
   openGraph: {
     type: 'website',
     locale: 'en_IN',

@@ -153,7 +153,7 @@ export function KitchenIdeasExperience({ products }: KitchenIdeasExperienceProps
               </p>
               <p className="mt-3 max-w-2xl text-sm leading-relaxed text-[#E5D4C1] sm:text-base">
                 Pick a meal occasion or dish below. Every idea pairs traditional Madurai cooking
-                guidance directly with the exact Aanandha Masala pouches you need — ready to add
+                guidance directly with the exact Anantha Masala pouches you need — ready to add
                 straight to your bag.
               </p>
             </div>
@@ -445,7 +445,7 @@ export function KitchenIdeasExperience({ products }: KitchenIdeasExperienceProps
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div>
                         <h3 className="font-display text-base font-bold text-[var(--text-primary)]">
-                          Aanandha Masala Packs Used in This Dish
+                          Anantha Masala Packs Used in This Dish
                         </h3>
                         <p className="text-xs text-[var(--text-secondary)]">
                           Inspect packaging labels or add directly to your spice bag.

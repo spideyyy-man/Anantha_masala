@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 export const metadata: Metadata = {
   title: 'All Categories — Madurai Masalas, Podis, Flours & Mixes',
   description:
-    'Browse Madurai Aanandha Masala collections: Cooking Essentials, Non-Veg Masalas, Traditional Idli Podi, Millet & Flours, Healthy Mixes, Seasonal Pickles, and Traditional Herbal Bath Care.',
+    'Browse Madurai Anantha Masala collections: Cooking Essentials, Non-Veg Masalas, Traditional Idli Podi, Millet & Flours, Healthy Mixes, Seasonal Pickles, and Traditional Herbal Bath Care.',
 };
 
 export default async function CategoriesOverviewPage() {

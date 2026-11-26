@@ -4,7 +4,7 @@ import { BRAND } from '@/data/brand';
 
 export const metadata: Metadata = {
   title: 'Shipping & Delivery Policy',
-  description: 'Transparent provisional shipping thresholds, dispatch notes, and delivery disclosures for Madurai Aanandha Masala.',
+  description: 'Transparent provisional shipping thresholds, dispatch notes, and delivery disclosures for Madurai Anantha Masala.',
 };
 
 export default function ShippingPolicyPage() {

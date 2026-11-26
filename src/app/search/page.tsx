@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
 export const metadata: Metadata = {
   title: 'Search Products (Tamil & English)',
   description:
-    'Search Madurai Aanandha Masala products in English, Tamil script, or phonetic transliterations (e.g. Manjal, Poondu, Kollu, Karuppu Kavuni, Bhai Veetu Masala).',
+    'Search Madurai Anantha Masala products in English, Tamil script, or phonetic transliterations (e.g. Manjal, Poondu, Kollu, Karuppu Kavuni, Bhai Veetu Masala).',
 };
 
 function parseSearchParams(sp: Record<string, string | string[] | undefined>): CatalogFilterInput {

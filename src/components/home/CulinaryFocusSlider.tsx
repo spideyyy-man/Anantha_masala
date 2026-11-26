@@ -126,7 +126,7 @@ export function CulinaryFocusSlider({
                   From What You Crave to the Pack That Cooks It.
                 </h2>
                 <p className="mt-2.5 max-w-xl text-sm leading-relaxed text-[var(--text-secondary)]">
-                  Every Aanandha Masala pouch is milled for a specific South Indian kitchen ritual.
+                  Every Anantha Masala pouch is milled for a specific South Indian kitchen ritual.
                   Choose a dish below to inspect the traditional 3-step method and the exact packs
                   behind it.
                 </p>

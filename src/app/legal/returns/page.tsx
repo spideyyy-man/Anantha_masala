@@ -4,7 +4,7 @@ import { BRAND } from '@/data/brand';
 
 export const metadata: Metadata = {
   title: 'Cancellation, Returns & Refunds Policy',
-  description: 'Food-safety-aware cancellation, damaged-pack replacement, and refund process for Madurai Aanandha Masala.',
+  description: 'Food-safety-aware cancellation, damaged-pack replacement, and refund process for Madurai Anantha Masala.',
 };
 
 export default function ReturnsPolicyPage() {

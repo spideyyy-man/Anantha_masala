@@ -734,7 +734,7 @@ export const SEED_PRODUCTS: SeedProduct[] = [
     categorySlugs: ['cooking-essentials'],
     shortSummary: 'Vibrant red chilli powder (Milagai Thool) — net weight & online MRP pending verification.',
     description:
-      'Everyday red Chilli Powder (Milagai Thool) from Madurai Aanandha Masala. Because the photographed front label (Assets/32.jpg) does not show net weight or MRP, online pricing is held pending confirmation — enquire directly via WhatsApp.',
+      'Everyday red Chilli Powder (Milagai Thool) from Madurai Anantha Masala. Because the photographed front label (Assets/32.jpg) does not show net weight or MRP, online pricing is held pending confirmation — enquire directly via WhatsApp.',
     usageTags: ['Daily Curries & Kuzhambu'],
     searchSynonyms: ['chilli powder', 'red chilli', 'milagai thool', 'mirchi powder', 'மிளகாய் தூள்'],
     isEdible: true,
@@ -1046,7 +1046,7 @@ export const SEED_PRODUCTS: SeedProduct[] = [
     categorySlugs: ['healthy-mixes', 'traditional-food-mixes'],
     shortSummary: 'Traditional South Indian multi-grain & nut Sathu Maavu porridge mix (250g).',
     description:
-      'Madurai Aanandha Sathu Maavu Healthy Mix (250g) for preparing warm morning malt, kanji, or laddu. Note: decorative pack icons ("100% Natural", "No Preservatives") are held pending lab/label verification.',
+      'Madurai Anantha Sathu Maavu Healthy Mix (250g) for preparing warm morning malt, kanji, or laddu. Note: decorative pack icons ("100% Natural", "No Preservatives") are held pending lab/label verification.',
     usageTags: ['Porridge & Kali', 'Breakfast & Tiffin'],
     searchSynonyms: ['sathu maavu', 'health mix', 'healthy mix', 'malt mix', 'porridge', 'சத்து மாவு'],
     isEdible: true,

@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 export const metadata: Metadata = {
   title: 'Kitchen Ideas — What to Cook & Which Madurai Masala to Use',
   description:
-    'Discover traditional South Indian breakfast, lunch, heritage grain, and weekend feast ideas — connected directly to genuine Madurai Aanandha Masala packs.',
+    'Discover traditional South Indian breakfast, lunch, heritage grain, and weekend feast ideas — connected directly to genuine Madurai Anantha Masala packs.',
   alternates: { canonical: '/recipes' },
 };
 

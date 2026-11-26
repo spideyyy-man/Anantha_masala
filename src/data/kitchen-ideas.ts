@@ -98,7 +98,7 @@ export const KITCHEN_IDEAS: KitchenIdeaEntry[] = [
     dishAlt: 'Steamed South Indian idlis and crispy golden dosa on a banana leaf with brass bowls of red milagai podi and gingelly oil',
     productSlugs: ['idli-milagai-podi', 'poondu-idli-podi', 'ellu-idli-podi', 'kollu-idli-podi', 'pirandai-idli-podi'],
     steps: [
-      'Spoon 1–2 teaspoons of your chosen Aanandha Idli Podi into a small bowl beside piping hot idlis or crisp dosa.',
+      'Spoon 1–2 teaspoons of your chosen Anantha Idli Podi into a small bowl beside piping hot idlis or crisp dosa.',
       'Drizzle cold-pressed gingelly oil (nallennai) or melted ghee and stir into a glossy coarse paste.',
       'Dust generously inside ghee roast dosa or mix with warm rice for a quick weekday lunchbox.',
     ],
@@ -191,7 +191,7 @@ export const KITCHEN_IDEAS: KitchenIdeaEntry[] = [
     dishAlt: 'Steaming golden South Indian vegetable sambar and frothy pepper tomato rasam served with rice on a banana leaf',
     productSlugs: ['sambar-podi', 'sourashtra-rasam-podi', 'kuzhambu-podi', 'manjal-podi'],
     steps: [
-      'Simmer seasonal vegetables with tamarind water, Manjal Podi, and Aanandha Sambar Podi before folding in mashed toor dal.',
+      'Simmer seasonal vegetables with tamarind water, Manjal Podi, and Anantha Sambar Podi before folding in mashed toor dal.',
       'For Madurai-style Sourashtra Rasam, bring crushed tomato, tamarind, garlic, and Sourashtra Rasam Podi to a gentle frothy boil (never overboil).',
       'Finish both with crisp mustard seeds, dried red chillies, hing, and fresh curry leaves.',
     ],

@@ -484,7 +484,7 @@ export function CinematicHeroStage({ products }: CinematicHeroStageProps) {
       ref={stageRef}
       role="region"
       aria-roledescription="carousel"
-      aria-label="Featured Madurai Aanandha Masala scenes"
+      aria-label="Featured Madurai Anantha Masala scenes"
       data-hero-active-slide={activeIdx + 1}
       data-hero-active-slug={product.slug}
       tabIndex={0}
@@ -933,7 +933,7 @@ export function CinematicHeroStage({ products }: CinematicHeroStageProps) {
                     <PouchImage
                       src={cutoutLarge}
                       fallbackSrc={fallbackOriginal}
-                      alt={`${product.name} (${product.tamilName}) — genuine Madurai Aanandha Masala pouch`}
+                      alt={`${product.name} (${product.tamilName}) — genuine Madurai Anantha Masala pouch`}
                       width={720}
                       height={960}
                       priority

@@ -7,7 +7,7 @@ import { EnquiryForm } from '@/components/forms/EnquiryForm';
 export const metadata: Metadata = {
   title: 'Contact & Customer Support',
   description:
-    'Reach Madurai Aanandha Masala for order assistance, product questions, or bulk enquiries in Villapuram, Madurai.',
+    'Reach Madurai Anantha Masala for order assistance, product questions, or bulk enquiries in Villapuram, Madurai.',
 };
 
 export default function ContactPage() {
@@ -22,7 +22,7 @@ export default function ContactPage() {
       <div className="mt-5 grid grid-cols-1 gap-10 lg:grid-cols-12">
         <div className="space-y-5 lg:col-span-5">
           <h1 className="font-display text-3xl font-bold text-[var(--text-primary)] sm:text-4xl">
-            Contact Madurai Aanandha Masala
+            Contact Madurai Anantha Masala
           </h1>
           <p className="text-sm leading-relaxed text-[var(--text-secondary)]">
             Have a question about pack weights, current batch availability (including seasonal

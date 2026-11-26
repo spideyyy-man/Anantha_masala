@@ -7,7 +7,7 @@ import { PouchImage } from '@/components/ui/PouchImage';
 export const metadata: Metadata = {
   title: 'Our Story — Who We Are',
   description:
-    'Learn about Madurai Aanandha Masala — traditional South Indian masalas, idli podis, heritage rice flours, and kanji mixes from Villapuram, Madurai.',
+    'Learn about Madurai Anantha Masala — traditional South Indian masalas, idli podis, heritage rice flours, and kanji mixes from Villapuram, Madurai.',
 };
 
 export default function StoryPage() {

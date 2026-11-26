@@ -98,8 +98,8 @@ export default function CartPage() {
             Your bag is empty
           </h2>
           <p className="mx-auto mt-2 max-w-md text-sm text-[var(--text-secondary)]">
-            Add Madurai masalas, idli podis, heritage rice flours, or kanji mixes to check out as a
-            guest — no account required.
+            Add Madurai masalas, idli podis, heritage rice flours, or kanji mixes and send your
+            order request directly on WhatsApp — no account required.
           </p>
           <Link
             href="/products"
@@ -304,7 +304,7 @@ export default function CartPage() {
 
               <p className="mt-4 flex items-center gap-1.5 text-xs text-[var(--brand-leaf)]">
                 <ShieldCheck className="h-4 w-4 shrink-0" aria-hidden="true" />
-                <span>Guest checkout • No raw card data ever touches our server</span>
+                <span>WhatsApp ordering • No online payment or card details collected</span>
               </p>
             </aside>
           )}

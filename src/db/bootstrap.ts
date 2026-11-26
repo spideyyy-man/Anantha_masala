@@ -147,8 +147,8 @@ export async function runBootstrap(forceReseed = false): Promise<void> {
             avifUrl: urls.avifUrl,
             altText:
               idx === 0
-                ? `${prod.name} (${prod.tamilName}) front packaging pouch â€” Madurai Aanandha Masala`
-                : `${prod.name} (${prod.tamilName}) alternate packaging view â€” Madurai Aanandha Masala`,
+                ? `${prod.name} (${prod.tamilName}) front packaging pouch — Madurai Anantha Masala`
+                : `${prod.name} (${prod.tamilName}) alternate packaging view — Madurai Anantha Masala`,
             isPrimary: idx === 0,
             sortOrder: idx,
           });

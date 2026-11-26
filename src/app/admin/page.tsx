@@ -343,7 +343,7 @@ export default function AdminConsolePage() {
             MFA Verified • Role: {data.admin.role}
           </p>
           <h1 className="font-display mt-1 text-3xl font-bold text-[var(--text-primary)]">
-            Madurai Aanandha Operations Console
+            Madurai Anantha Operations Console
           </h1>
         </div>
         <button

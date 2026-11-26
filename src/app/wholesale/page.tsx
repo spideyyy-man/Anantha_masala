@@ -7,7 +7,7 @@ import { EnquiryForm } from '@/components/forms/EnquiryForm';
 export const metadata: Metadata = {
   title: 'Bulk & Wholesale Enquiries',
   description:
-    'Request wholesale or bulk supply quotes for Madurai Aanandha Masala spices, idli podis, heritage flours, and festive gifting packs.',
+    'Request wholesale or bulk supply quotes for Madurai Anantha Masala spices, idli podis, heritage flours, and festive gifting packs.',
 };
 
 export default function WholesalePage() {

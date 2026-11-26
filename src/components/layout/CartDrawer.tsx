@@ -270,7 +270,7 @@ export function CartDrawer() {
                     onClick={() => setCartDrawerOpen(false)}
                     className="flex min-h-[46px] items-center justify-center gap-2 rounded-xl bg-[var(--brand-crimson)] px-5 text-sm font-semibold text-white transition-colors hover:bg-[var(--brand-crimson-hover)]"
                   >
-                    Proceed to Guest Checkout
+                    Continue with WhatsApp Order
                     <ArrowRight className="h-4 w-4" aria-hidden="true" />
                   </Link>
                   <div className="grid grid-cols-2 gap-2">

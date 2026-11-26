@@ -103,7 +103,7 @@ export default function CheckoutPage() {
     }
 
     const message = [
-      '*New order enquiry - Madurai Aanandha Masala*',
+      `*New order enquiry - ${BRAND.fullName}*`,
       '',
       '*Customer details*',
       'Name: ' + customerName.trim(),
@@ -528,8 +528,9 @@ export default function CheckoutPage() {
                 WhatsApp-first ordering
               </p>
               <p className="mt-1">
-                Prices and stock are re-verified on the server. Card/UPI details are tokenized by
-                our hosted gateway adapter — never stored on our servers.
+                No online payment or card details are collected on this website. Your cart and
+                delivery details are sent directly to our team on WhatsApp to confirm availability,
+                shipping, and final total.
               </p>
             </div>
 
