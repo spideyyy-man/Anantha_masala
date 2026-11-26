@@ -611,37 +611,21 @@ export function CategoryExplorer({ categories, allProducts }: CategoryExplorerPr
       data-connected-transition-active={launchingSlug ? 'true' : 'false'}
       tabIndex={0}
       onKeyDown={handleKeyDown}
-      className="relative overflow-hidden bg-gradient-to-b from-[#F9F1E4] via-[#F4EAD9] to-[#FBF6EE] py-16 text-[var(--text-primary)] focus:outline-none lg:py-22"
+      className="relative overflow-hidden bg-gradient-to-b from-[#F9F1E4] via-[#F4EAD9] to-[#FBF6EE] py-14 text-[var(--text-primary)] focus:outline-none lg:py-18"
     >
-      {/* Subtle Top Architectural Chapter Bridge From Hero */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none mx-auto mb-8 flex max-w-7xl items-center gap-4 px-4 sm:px-6"
-      >
-        <span className="h-px flex-1 bg-gradient-to-r from-transparent via-[var(--border-strong)] to-[var(--border-subtle)]" />
-        <span className="font-tamil text-xs font-bold tracking-wide text-[var(--brand-crimson)]/85">
-          அத்தியாயம் 01 • மதுரை சமையல் பிரிவுகள்
-        </span>
-        <span className="h-px flex-1 bg-gradient-to-l from-transparent via-[var(--border-strong)] to-[var(--border-subtle)]" />
-      </div>
-
-      {/* Header Row — Clean Editorial Controls Without Auto/Pause/Play Clutter */}
+      {/* Header Row */}
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div className="max-w-2xl">
-            <p className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--brand-crimson)]">
-              Chapter 01 • Curated Collections • Eight Pantry Chapters
+          <div className="max-w-xl">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--brand-crimson)]">
+              Collections
             </p>
             <h2
               id="category-explorer-heading"
-              className="font-display mt-2 text-3xl font-bold leading-[1.06] tracking-[-0.02em] text-[var(--text-primary)] sm:text-5xl"
+              className="font-display mt-1.5 text-2xl font-bold leading-tight tracking-[-0.015em] text-[var(--text-primary)] sm:text-3xl lg:text-4xl"
             >
-              Every Shelf of the Madurai Kitchen.
+              Shop by Category
             </h2>
-            <p className="mt-2.5 max-w-xl text-sm leading-relaxed text-[var(--text-secondary)]">
-              From daily sambar and Bhai Veetu non-veg masalas to roasted breakfast idli podis and
-              eight-grain heirloom mixes — explore our pantry by how Madurai cooks.
-            </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5">
@@ -806,16 +790,6 @@ export function CategoryExplorer({ categories, allProducts }: CategoryExplorerPr
                   : 'shadow-md hover:shadow-xl'
               } ${isLaunching ? 'scale-[1.03] ring-4 ring-[var(--brand-crimson)]/45' : ''}`}
             >
-              {/* Subtle Architectural Watermark Number */}
-              <span
-                aria-hidden="true"
-                className={`font-display pointer-events-none absolute -right-3 -top-6 select-none text-[8.5rem] font-bold leading-none transition-transform duration-[300ms] ${
-                  spec.darkSurface ? 'text-[#F7CE68]/[0.07]' : 'text-[#9E1B1E]/[0.055]'
-                } ${isCenter ? 'scale-105' : 'scale-95'}`}
-              >
-                {spec.watermarkNum}
-              </span>
-
               {/* Dark Chamber Glow (Non-Veg Masalas) */}
               {spec.darkSurface && (
                 <div
@@ -1042,33 +1016,20 @@ export function CategoryExplorer({ categories, allProducts }: CategoryExplorerPr
                 key={cat.id}
                 role="tab"
                 aria-selected={active}
-                aria-label={`0${idx + 1} ${cat.name}`}
+                aria-label={`${cat.name}`}
                 type="button"
                 onClick={() => focusCollectionIndex(idx)}
-                className={`inline-flex min-h-[34px] items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 text-xs font-semibold transition-all duration-[200ms] sm:px-3 ${
+                className={`inline-flex min-h-[34px] items-center gap-1.5 whitespace-nowrap rounded-full border px-3 text-xs font-semibold transition-all duration-[200ms] ${
                   active
                     ? 'border-[var(--brand-crimson)] bg-[var(--brand-crimson)] text-white shadow-xs'
                     : 'border-[var(--border-strong)]/70 bg-[var(--bg-surface)]/80 text-[var(--text-secondary)] hover:border-[var(--brand-crimson)] hover:text-[var(--text-primary)]'
                 }`}
               >
-                <span className="font-mono-num text-[10px] opacity-75">0{idx + 1}</span>
                 <span className={active ? 'inline' : 'hidden md:inline'}>{shortLabel}</span>
               </button>
             );
           })}
         </div>
-
-        <p className="text-xs text-[var(--text-muted)]">
-          Drag the shelf or click any side card to focus, or click{' '}
-          <Link
-            href={`/categories/${activeCategory.slug}`}
-            onClick={(e) => navigateToCollectionConnected(activeCategory, e)}
-            className="font-bold text-[var(--brand-crimson)] underline-offset-2 transition-colors duration-[180ms] hover:underline"
-          >
-            {activeCategory.name}
-          </Link>{' '}
-          to enter the collection.
-        </p>
       </div>
 
       {/* Connected Shared-Element Transition Bridge Overlay during Navigation Launch */}

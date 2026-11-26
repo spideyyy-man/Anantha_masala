@@ -172,32 +172,20 @@ export function InfinitePantryShowcase({ allProducts, categories = [] }: Infinit
     <section
       id="pantry-showcase"
       aria-labelledby="infinite-pantry-heading"
-      className="relative overflow-hidden bg-gradient-to-b from-[#FBF6EE] via-[#F4EAD9] to-[#FBF6EE] py-14 text-[var(--text-primary)] lg:py-18"
+      className="relative overflow-hidden bg-gradient-to-b from-[#FBF6EE] via-[#F4EAD9] to-[#FBF6EE] py-12 text-[var(--text-primary)] lg:py-16"
     >
-      {/* Chapter 03 Architectural Divider */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none mx-auto mb-7 flex max-w-7xl items-center gap-4 px-4 sm:px-6"
-      >
-        <span className="h-px flex-1 bg-gradient-to-r from-transparent via-[var(--border-strong)] to-[var(--border-subtle)]" />
-        <span className="font-tamil text-xs font-bold tracking-wide text-[var(--brand-crimson)]/85">
-          அத்தியாயம் 03 • 25 அசல் மசாலா மற்றும் மாவு வகைகள்
-        </span>
-        <span className="h-px flex-1 bg-gradient-to-l from-transparent via-[var(--border-strong)] to-[var(--border-subtle)]" />
-      </div>
-
-      {/* Coordinated Chapter Header + Quick Category Jump Pills */}
+      {/* Section Header + Quick Category Jump Pills */}
       <div className="mx-auto mb-6 max-w-7xl px-4 sm:px-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--brand-crimson)]">
-              Chapter 03 • Complete Pantry Stream • {showcaseProducts.length} Audited Packs
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--brand-crimson)]">
+              All Products
             </p>
             <h2
               id="infinite-pantry-heading"
-              className="font-display mt-1.5 text-2xl font-bold leading-tight tracking-[-0.02em] text-[var(--text-primary)] sm:text-4xl"
+              className="font-display mt-1 text-2xl font-bold leading-tight tracking-[-0.015em] text-[var(--text-primary)] sm:text-3xl"
             >
-              Every Genuine Pack, Ready for Your Kitchen Shelf.
+              Browse All {showcaseProducts.length} Packs
             </h2>
           </div>
 

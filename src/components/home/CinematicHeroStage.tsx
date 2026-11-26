@@ -612,23 +612,18 @@ export function CinematicHeroStage({ products }: CinematicHeroStageProps) {
       {/* Main Content Stage */}
       <div className="relative z-10 mx-auto flex w-full max-w-7xl flex-1 flex-col justify-center px-4 py-4 sm:px-6 lg:px-16 lg:py-8">
         <div className="grid grid-cols-1 items-center gap-6 lg:grid-cols-12 lg:gap-8">
-          {/* Left Editorial Column — 100% Synchronized Scene Narrative, Product Name, Description, Price & CTA */}
+          {/* Left Editorial Column — Clean Product Title, Tamil Name, Short Description, Price & CTA */}
           <div className="lg:col-span-6">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <div
+              <p
                 key={`kicker-${scene.slug}-${transitionKey}`}
-                className={`${textEnterClass} inline-flex flex-wrap items-center gap-2 rounded-full border border-white/20 bg-black/40 px-3.5 py-1 text-[11px] font-bold tracking-wide backdrop-blur-sm`}
+                className={`${textEnterClass} font-tamil text-sm font-semibold tracking-wide transition-colors duration-700 sm:text-base`}
+                style={{ color: scene.accentHex }}
               >
-                <span
-                  className="h-2 w-2 rounded-full transition-colors duration-700"
-                  style={{ backgroundColor: scene.accentHex }}
-                />
-                <span className="text-[#F6D592]">TRADITION, IN MOTION</span>
-                <span aria-hidden="true" className="opacity-35">|</span>
-                <span style={{ color: scene.accentHex }}>{scene.kicker}</span>
-              </div>
+                {product.tamilName}
+              </p>
 
-              {/* Mobile / Tablet Prominent Arrow Controls + Slide Counter */}
+              {/* Mobile / Tablet Arrow Controls + Slide Counter */}
               <div className="flex items-center gap-1.5 lg:hidden">
                 <span className="font-mono-num mr-1 text-xs font-bold text-[#F6D592]">
                   0{activeIdx + 1} / 0{totalSlides}
@@ -652,22 +647,16 @@ export function CinematicHeroStage({ products }: CinematicHeroStageProps) {
               </div>
             </div>
 
-            {/* Synchronized Product Headline + Tamil Name + Poetic Tagline + Description */}
-            <div className="relative mt-3.5 lg:mt-4 lg:min-h-[214px]">
+            {/* Product Headline & Concise Description */}
+            <div className="relative mt-2 lg:min-h-[168px]">
               <div
                 key={`headline-${scene.slug}-${transitionKey}`}
                 className={textEnterClass}
                 style={hasTransitioned ? { animationDelay: '100ms' } : undefined}
               >
-                <p
-                  className="font-tamil text-sm font-semibold tracking-wide transition-colors duration-700 sm:text-base"
-                  style={{ color: scene.accentHex }}
-                >
-                  {product.tamilName}
-                </p>
                 <h1
                   id="hero-heading"
-                  className="font-display mt-1 text-[2rem] font-bold leading-[1.06] tracking-[-0.02em] text-[#FFF9F0] sm:text-5xl lg:text-[3.35rem]"
+                  className="font-display text-3xl font-bold leading-[1.1] tracking-[-0.02em] text-[#FFF9F0] sm:text-4xl lg:text-[2.85rem]"
                 >
                   {product.name}
                 </h1>
@@ -678,13 +667,7 @@ export function CinematicHeroStage({ products }: CinematicHeroStageProps) {
                 className={textEnterClass}
                 style={hasTransitioned ? { animationDelay: '220ms' } : undefined}
               >
-                <p
-                  className="mt-2.5 font-display text-base font-semibold sm:text-lg"
-                  style={{ color: scene.accentHex }}
-                >
-                  {scene.sceneTitle}
-                </p>
-                <p className="mt-1.5 max-w-lg text-sm leading-relaxed text-[#E6D6C4] sm:text-[15px]">
+                <p className="mt-3 max-w-lg text-sm leading-relaxed text-[#E6D6C4] sm:text-[15px]">
                   {scene.sceneLead}
                 </p>
               </div>

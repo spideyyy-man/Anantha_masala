@@ -7,17 +7,6 @@ import { PrivacyTrigger } from '@/components/ui/PrivacyTrigger';
 export function SiteFooter() {
   return (
     <footer className="relative border-t border-[#F7CE68]/20 bg-[var(--bg-deep)] pb-24 text-[var(--text-on-deep)] md:pb-10">
-      {/* Subtle Top Brass Architectural Rule Connecting Homepage Finale Into Footer */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none mx-auto flex max-w-7xl items-center gap-4 px-4 pt-6 sm:px-6"
-      >
-        <span className="h-px flex-1 bg-gradient-to-r from-transparent via-[#F7CE68]/30 to-[#F7CE68]/10" />
-        <span className="font-tamil text-[11px] font-semibold tracking-wider text-[#F7CE68]/80">
-          மதுரை ஆனந்தா மசாலா • வில்லாபுரம், மதுரை
-        </span>
-        <span className="h-px flex-1 bg-gradient-to-l from-transparent via-[#F7CE68]/30 to-[#F7CE68]/10" />
-      </div>
       <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:py-14">
         <div className="grid grid-cols-1 gap-10 md:grid-cols-2 lg:grid-cols-4">
           {/* Column 1: Brand & Madurai identity */}

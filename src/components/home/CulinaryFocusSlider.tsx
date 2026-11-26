@@ -14,7 +14,6 @@ import {
   Building2,
   Clock,
   Utensils,
-  Sparkles,
 } from 'lucide-react';
 import type { CatalogProduct } from '@/domain/catalog/service';
 import { BRAND, SOCIAL_SHOWCASE_ITEMS, formatPaiseToInr } from '@/data/brand';
@@ -97,45 +96,28 @@ export function CulinaryFocusSlider({
         <section
           id="food-storytelling"
           aria-labelledby="culinary-spotlight-heading"
-          className="relative overflow-hidden bg-[#FBF6EE] py-16 text-[var(--text-primary)] lg:py-22"
+          className="relative overflow-hidden bg-[#FBF6EE] py-14 text-[var(--text-primary)] lg:py-18"
         >
-          {/* Chapter 02 Architectural Divider */}
-          <div
-            aria-hidden="true"
-            className="pointer-events-none mx-auto mb-8 flex max-w-7xl items-center gap-4 px-4 sm:px-6"
-          >
-            <span className="h-px flex-1 bg-gradient-to-r from-transparent via-[var(--border-strong)] to-[var(--border-subtle)]" />
-            <span className="font-tamil text-xs font-bold tracking-wide text-[var(--brand-crimson)]/85">
-              அத்தியாயம் 02 • மசாலாவும் மதுரை சமையலும்
-            </span>
-            <span className="h-px flex-1 bg-gradient-to-l from-transparent via-[var(--border-strong)] to-[var(--border-subtle)]" />
-          </div>
-
           <div className="mx-auto max-w-7xl px-4 sm:px-6">
-            {/* Editorial Section Header */}
+            {/* Section Header */}
             <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-              <div className="max-w-2xl">
-                <p className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.22em] text-[var(--brand-crimson)]">
+              <div className="max-w-xl">
+                <p className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--brand-crimson)]">
                   <ChefHat className="h-4 w-4" aria-hidden="true" />
-                  Chapter 02 • Food Storytelling • From Pack to Pot
+                  Kitchen Ideas
                 </p>
                 <h2
                   id="culinary-spotlight-heading"
-                  className="font-display mt-2 text-3xl font-bold leading-[1.06] tracking-[-0.02em] text-[var(--text-primary)] sm:text-5xl"
+                  className="font-display mt-1.5 text-2xl font-bold leading-tight tracking-[-0.015em] text-[var(--text-primary)] sm:text-3xl lg:text-4xl"
                 >
-                  From What You Crave to the Pack That Cooks It.
+                  What You Can Cook With Our Masalas
                 </h2>
-                <p className="mt-2.5 max-w-xl text-sm leading-relaxed text-[var(--text-secondary)]">
-                  Every Anantha Masala pouch is milled for a specific South Indian kitchen ritual.
-                  Choose a dish below to inspect the traditional 3-step method and the exact packs
-                  behind it.
-                </p>
               </div>
               <Link
                 href="/recipes"
                 className="inline-flex min-h-[44px] items-center gap-2 self-start rounded-full bg-[var(--bg-deep)] px-5 text-xs font-bold text-[#FBF5EC] transition-colors duration-[180ms] hover:bg-[var(--brand-crimson)] sm:self-auto"
               >
-                Explore All 6 Kitchen Guides
+                All Kitchen Ideas
                 <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
               </Link>
             </div>
@@ -190,14 +172,10 @@ export function CulinaryFocusSlider({
                   className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#160B06]/90 via-[#190C07]/20 to-[#160B06]/40"
                 />
 
-                {/* Top Badges: Occasion + Verified Packaging Basis */}
+                {/* Top Badge: Occasion */}
                 <div className="absolute inset-x-5 top-5 flex flex-wrap items-center justify-between gap-2">
                   <span className="rounded-full border border-white/25 bg-black/55 px-3.5 py-1.5 text-[11px] font-bold tracking-wide text-[#F7CE68] backdrop-blur-md">
                     {current.occasionTag}
-                  </span>
-                  <span className="hidden items-center gap-1.5 rounded-full border border-white/20 bg-black/55 px-3 py-1 text-[11px] font-medium text-[#FBF5EC] backdrop-blur-md sm:inline-flex">
-                    <Sparkles className="h-3 w-3 text-[#F7CE68]" aria-hidden="true" />
-                    {current.usageBasis}
                   </span>
                 </div>
 
@@ -377,39 +355,27 @@ export function CulinaryFocusSlider({
         <section
           id="recipes-showcase"
           aria-labelledby="recipes-showcase-heading"
-          className="relative overflow-hidden bg-gradient-to-b from-[#FBF6EE] via-[#F5EBDC] to-[#23130D] pt-14 pb-16 text-[var(--text-primary)] lg:pt-20 lg:pb-22"
+          className="relative overflow-hidden bg-gradient-to-b from-[#FBF6EE] via-[#F5EBDC] to-[#23130D] pt-12 pb-16 text-[var(--text-primary)] lg:pt-16 lg:pb-20"
         >
-          {/* Chapter 04 Architectural Divider */}
-          <div
-            aria-hidden="true"
-            className="pointer-events-none mx-auto mb-8 flex max-w-7xl items-center gap-4 px-4 sm:px-6"
-          >
-            <span className="h-px flex-1 bg-gradient-to-r from-transparent via-[var(--border-strong)] to-[var(--border-subtle)]" />
-            <span className="font-tamil text-xs font-bold tracking-wide text-[var(--brand-crimson)]/85">
-              அத்தியாயம் 04 • தினசரி சமையல் குறிப்புகள் & சமூக வலைத்தளம்
-            </span>
-            <span className="h-px flex-1 bg-gradient-to-l from-transparent via-[var(--border-strong)] to-[var(--border-subtle)]" />
-          </div>
-
           <div className="mx-auto max-w-7xl px-4 sm:px-6">
-            {/* Chapter 04 Header: Everyday Madurai Recipes */}
+            {/* Everyday Recipes Header */}
             <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-              <div className="max-w-2xl">
-                <p className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--brand-crimson)]">
-                  Chapter 04 • Everyday Madurai Recipes • Dish & Pack Pairings
+              <div className="max-w-xl">
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--brand-crimson)]">
+                  Recipes
                 </p>
                 <h2
                   id="recipes-showcase-heading"
-                  className="font-display mt-2 text-3xl font-bold leading-[1.08] tracking-[-0.02em] text-[var(--text-primary)] sm:text-4xl"
+                  className="font-display mt-1.5 text-2xl font-bold leading-tight tracking-[-0.015em] text-[var(--text-primary)] sm:text-3xl"
                 >
-                  Three More Madurai Table Staples to Cook This Week.
+                  More Madurai Dishes to Try
                 </h2>
               </div>
               <Link
                 href="/recipes"
                 className="inline-flex min-h-[42px] items-center gap-1.5 self-start rounded-full border border-[var(--border-strong)] bg-[var(--bg-surface)] px-4.5 text-xs font-bold text-[var(--text-primary)] transition-colors duration-[180ms] hover:border-[var(--brand-crimson)] hover:text-[var(--brand-crimson)] sm:self-auto"
               >
-                View All 6 Recipe Guides
+                View All Recipes
                 <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
               </Link>
             </div>
@@ -506,15 +472,15 @@ export function CulinaryFocusSlider({
               })}
             </div>
 
-            {/* Authentic Instagram & YouTube Community Strip (Elevated Card Panel) */}
-            <div className="mt-14 rounded-[32px] border border-[var(--border-strong)] bg-[#FBF6EE] p-6 shadow-md sm:p-8">
+            {/* Instagram & YouTube Community Strip */}
+            <div className="mt-12 rounded-[28px] border border-[var(--border-strong)] bg-[#FBF6EE] p-6 shadow-md sm:p-8">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                 <div>
-                  <p className="text-xs font-bold uppercase tracking-[0.2em] text-[var(--brand-crimson)]">
-                    From Instagram & YouTube ({BRAND.social.snapshotDate} Snapshot)
+                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--brand-crimson)]">
+                    Instagram & YouTube
                   </p>
                   <h3 className="font-display mt-1 text-2xl font-bold text-[var(--text-primary)] sm:text-3xl">
-                    Real Reels & Kitchen Videos From {BRAND.social.instagramHandle}
+                    Follow {BRAND.social.instagramHandle}
                   </h3>
                 </div>
                 <div className="flex gap-2">
@@ -590,11 +556,8 @@ export function CulinaryFocusSlider({
                         <h4 className="font-display text-base font-bold text-[var(--text-primary)]">
                           {item.title}
                         </h4>
-                        <p className="font-tamil text-xs font-semibold text-[var(--brand-crimson)]">
+                        <p className="font-tamil mt-0.5 text-xs font-semibold text-[var(--brand-crimson)]">
                           {item.tamilSubtitle}
-                        </p>
-                        <p className="mt-1.5 text-xs leading-relaxed text-[var(--text-secondary)]">
-                          {item.snapshotCaptionNote}
                         </p>
                       </div>
 
@@ -627,16 +590,16 @@ export function CulinaryFocusSlider({
 
               <div className="relative z-10 grid grid-cols-1 items-center gap-8 lg:grid-cols-12">
                 <div className="lg:col-span-7">
-                  <p className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.2em] text-[#F7CE68]">
+                  <p className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-[#F7CE68]">
                     <Building2 className="h-4 w-4" aria-hidden="true" />
-                    Villapuram, Madurai • Homes, Restaurants & Wholesale
+                    Villapuram, Madurai
                   </p>
-                  <h2 className="font-display mt-3 text-3xl font-bold leading-tight text-white sm:text-5xl">
-                    Bring Madurai’s Pantry Into Your Kitchen Today.
+                  <h2 className="font-display mt-2.5 text-2xl font-bold leading-tight text-white sm:text-4xl">
+                    Order Fresh From Madurai Today.
                   </h2>
-                  <p className="mt-3 max-w-xl text-sm leading-relaxed text-[#F8E2DC] sm:text-base">
-                    Order single 50g–250g pouches with guest checkout or request direct Madurai bulk
-                    quotes for restaurants, caterers, and festive gifting.
+                  <p className="mt-2.5 max-w-lg text-sm leading-relaxed text-[#F8E2DC]">
+                    Order 50g–250g packs directly on WhatsApp, or contact us for restaurant,
+                    catering, and bulk supply.
                   </p>
                   <div className="mt-7 flex flex-wrap gap-3">
                     <Link
