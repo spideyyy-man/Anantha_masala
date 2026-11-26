@@ -7,6 +7,8 @@ import {
   AlertCircle,
   MessageCircle,
   Truck,
+  Copy,
+  Check,
 } from 'lucide-react';
 import { useStore } from '@/components/providers/StoreProviders';
 import { BRAND, buildWhatsAppUrl, formatPaiseToInr } from '@/data/brand';
@@ -43,6 +45,7 @@ export default function CheckoutPage() {
   const [deliveryNotes, setDeliveryNotes] = useState('');
 
   const [submitting, setSubmitting] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
 
@@ -88,6 +91,63 @@ export default function CheckoutPage() {
     return errs;
   };
 
+  const buildOrderMessage = () => {
+    if (!cart || cart.items.length === 0) return '';
+    return [
+      `*New order enquiry - ${BRAND.fullName}*`,
+      '',
+      '*Customer details*',
+      'Name: ' + (customerName.trim() || '(to be filled)'),
+      'Phone: ' + (customerPhone.trim() || '(to be filled)'),
+      customerEmail.trim() ? 'Email: ' + customerEmail.trim() : null,
+      '',
+      '*Delivery address*',
+      shippingAddressLine1.trim() || '(to be filled)',
+      shippingAddressLine2.trim() || null,
+      (shippingCity.trim() || 'Madurai') + ', ' + shippingState,
+      'Pincode: ' + (shippingPincode.trim() || '(to be filled)'),
+      deliveryNotes.trim() ? 'Delivery note: ' + deliveryNotes.trim() : null,
+      '',
+      '*Items requested*',
+      ...cart.items.map(
+        (item, index) =>
+          index +
+          1 +
+          '. ' +
+          item.productName +
+          ' / ' +
+          item.variantLabel +
+          ' x ' +
+          item.quantity +
+          ' = ' +
+          formatPaiseToInr(item.lineTotalPaise)
+      ),
+      '',
+      'Subtotal: ' + formatPaiseToInr(cart.subtotalPaise),
+      'Shipping estimate (' +
+        shippingState +
+        '): ' +
+        (cart.shippingPaise === 0 ? 'FREE' : formatPaiseToInr(cart.shippingPaise)),
+      '*Estimated total: ' + formatPaiseToInr(cart.totalPaise) + '*',
+      '',
+      'Please confirm product availability, final shipping charge and order total. I understand this is an enquiry, not a confirmed order. No online payment has been made.',
+    ]
+      .filter((line): line is string => line !== null)
+      .join('\n');
+  };
+
+  const handleCopyMessage = async () => {
+    const msg = buildOrderMessage();
+    if (!msg) return;
+    try {
+      await navigator.clipboard.writeText(msg);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Clipboard API unavailable
+    }
+  };
+
   const handleSubmitOrder = (e: React.FormEvent) => {
     e.preventDefault();
     if (submitting || !cart || cart.items.length === 0) return;
@@ -102,34 +162,7 @@ export default function CheckoutPage() {
       return;
     }
 
-    const message = [
-      `*New order enquiry - ${BRAND.fullName}*`,
-      '',
-      '*Customer details*',
-      'Name: ' + customerName.trim(),
-      'Phone: ' + customerPhone.trim(),
-      customerEmail.trim() ? 'Email: ' + customerEmail.trim() : null,
-      '',
-      '*Delivery address*',
-      shippingAddressLine1.trim(),
-      shippingAddressLine2.trim() || null,
-      shippingCity.trim() + ', ' + shippingState,
-      'Pincode: ' + shippingPincode.trim(),
-      deliveryNotes.trim() ? 'Delivery note: ' + deliveryNotes.trim() : null,
-      '',
-      '*Items requested*',
-      ...cart.items.map((item, index) =>
-        (index + 1) + '. ' + item.productName + ' / ' + item.variantLabel +
-        ' x ' + item.quantity + ' = ' + formatPaiseToInr(item.lineTotalPaise)
-      ),
-      '',
-      'Subtotal: ' + formatPaiseToInr(cart.subtotalPaise),
-      'Shipping estimate (' + shippingState + '): ' +
-        (cart.shippingPaise === 0 ? 'FREE' : formatPaiseToInr(cart.shippingPaise)),
-      '*Estimated total: ' + formatPaiseToInr(cart.totalPaise) + '*',
-      '',
-      'Please confirm product availability, final shipping charge and order total. I understand this is an enquiry, not a confirmed order. No online payment has been made.',
-    ].filter(Boolean).join('\n');
+    const message = buildOrderMessage();
 
     const link = document.createElement('a');
     link.href = buildWhatsAppUrl(message);
@@ -536,19 +569,46 @@ export default function CheckoutPage() {
 
             <div className="mt-4 border-t border-[var(--border-subtle)] pt-4">
               <p className="text-xs font-semibold text-[var(--text-primary)]">
-                WhatsApp order assistance
+                WhatsApp message preview & copy fallback
               </p>
-              <a
-                href={cart.whatsappEnquiryUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-2 inline-flex min-h-[42px] w-full items-center justify-center gap-1.5 rounded-xl border border-[var(--brand-leaf)] bg-[var(--brand-leaf-soft)] px-4 text-xs font-semibold text-[var(--brand-leaf)]"
-              >
-                <MessageCircle className="h-4 w-4" aria-hidden="true" />
-                Send Cart Summary on WhatsApp
-              </a>
+              <details className="mt-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-canvas)] p-3 text-xs">
+                <summary className="cursor-pointer font-semibold text-[var(--text-primary)]">
+                  Preview exact WhatsApp message
+                </summary>
+                <pre className="mt-2.5 max-h-56 overflow-y-auto whitespace-pre-wrap break-words rounded-lg bg-[var(--bg-surface)] p-3 font-sans text-[11px] leading-relaxed text-[var(--text-secondary)]">
+                  {buildOrderMessage()}
+                </pre>
+              </details>
+              <div className="mt-2.5 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={() => void handleCopyMessage()}
+                  className="inline-flex min-h-[42px] w-full items-center justify-center gap-1.5 rounded-xl border border-[var(--border-strong)] bg-[var(--bg-canvas)] px-3 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--bg-surface-muted)]"
+                >
+                  {copied ? (
+                    <>
+                      <Check className="h-3.5 w-3.5 text-[var(--brand-leaf)]" aria-hidden="true" />
+                      Copied Order Text
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="h-3.5 w-3.5" aria-hidden="true" />
+                      Copy Order Text
+                    </>
+                  )}
+                </button>
+                <a
+                  href={cart.whatsappEnquiryUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex min-h-[42px] w-full items-center justify-center gap-1.5 rounded-xl border border-[var(--brand-leaf)] bg-[var(--brand-leaf-soft)] px-3 text-xs font-semibold text-[var(--brand-leaf)] hover:bg-[var(--brand-leaf)] hover:text-white"
+                >
+                  <MessageCircle className="h-4 w-4" aria-hidden="true" />
+                  Quick Bag Enquiry
+                </a>
+              </div>
               <p className="mt-1.5 text-[11px] text-[var(--text-muted)]">
-Your request is sent to our team for confirmation. No order is confirmed and no payment is taken on this website.
+                Your request is sent to our team for confirmation. No order is confirmed and no payment is taken on this website.
               </p>
             </div>
           </aside>

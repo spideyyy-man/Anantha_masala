@@ -28,7 +28,7 @@ const PRIMARY_NAV = [
   { href: '/story', label: 'Madurai Story' },
   { href: '/recipes', label: 'Kitchen Ideas' },
   { href: '/wholesale', label: 'Bulk' },
-  { href: '/orders/track', label: 'Track' },
+  { href: '/contact', label: 'Contact' },
 ];
 
 // Client-level cache so instant search never re-fetches across page navigations

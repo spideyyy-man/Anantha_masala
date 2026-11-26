@@ -92,7 +92,7 @@ export function CartDrawer() {
                       <strong className="text-[var(--brand-crimson)]">
                         {formatPaiseToInr(cart.amountToFreeShippingPaise)}
                       </strong>{' '}
-                      more for free shipping (provisional ₹499+ rule)
+                      more for FREE shipping on orders ₹499+
                     </>
                   ) : (
                     <span className="font-semibold text-[var(--brand-leaf)]">
@@ -245,7 +245,7 @@ export function CartDrawer() {
                     <span className="font-mono-num font-semibold text-[var(--text-primary)]">{formatPaiseToInr(cart.subtotalPaise)}</span>
                   </div>
                   <div className="flex justify-between text-[var(--text-secondary)]">
-                    <span>Estimated Shipping (TN default)</span>
+                    <span>Estimated Shipping (Tamil Nadu)</span>
                     <span className="font-mono-num font-medium">
                       {cart.shippingPaise === 0 ? (
                         <strong className="text-[var(--brand-leaf)]">FREE</strong>

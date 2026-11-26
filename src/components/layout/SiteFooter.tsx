@@ -93,9 +93,7 @@ export function SiteFooter() {
               <li><Link href="/story" className="hover:text-white">Our Madurai Story</Link></li>
               <li><Link href="/recipes" className="hover:text-white">Kitchen & Serving Ideas</Link></li>
               <li><Link href="/wholesale" className="hover:text-white">Bulk & Wholesale Enquiries</Link></li>
-              <li><Link href="/orders/track" className="hover:text-white">Track Your Order</Link></li>
               <li><Link href="/contact" className="hover:text-white">Contact & Customer Support</Link></li>
-              <li><Link href="/admin" className="hover:text-white">Store Operator Console</Link></li>
             </ul>
           </div>
 

@@ -72,7 +72,7 @@ export default function CartPage() {
             Your Spice Bag
           </h1>
           <p className="mt-1 text-sm text-[var(--text-secondary)]">
-            Prices, stock, and shipping thresholds are calculated authoritatively on our server.
+            Review your packs, adjust quantities, and send your order directly on WhatsApp.
           </p>
         </div>
         {items.length > 0 && (
@@ -228,7 +228,7 @@ export default function CartPage() {
                       <strong className="font-mono-num text-[var(--brand-crimson)]">
                         {formatPaiseToInr(cart.amountToFreeShippingPaise)}
                       </strong>{' '}
-                      more for free shipping (₹499+ threshold)
+                      more for FREE shipping on orders ₹499+
                     </span>
                   ) : (
                     <span className="font-semibold text-[var(--brand-leaf)]">
@@ -259,7 +259,7 @@ export default function CartPage() {
                   </dd>
                 </div>
                 <div className="flex justify-between text-[var(--text-secondary)]">
-                  <dt>Provisional Shipping (TN default)</dt>
+                  <dt>Estimated Shipping (Tamil Nadu)</dt>
                   <dd className="font-mono-num font-semibold">
                     {cart.shippingPaise === 0 ? (
                       <span className="text-[var(--brand-leaf)]">FREE</span>

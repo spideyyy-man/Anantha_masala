@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
 export const metadata: Metadata = {
   title: 'All Products — Madurai Masalas, Podis, Flours & Mixes',
   description:
-    'Filter and search all 25 audited Madurai Anantha Masala products by category, pack size (50g–250g), price, availability, and Tamil or English name.',
+    'Filter and search all 25 Madurai Anantha Masala products by category, pack size (50g–250g), price, availability, and Tamil or English name.',
   alternates: { canonical: '/products' },
 };
 
@@ -59,7 +59,7 @@ export default async function AllProductsPage({
       facets={data.facets}
       initialFilters={filters}
       heading="Madurai Pantry"
-      subheading="All 25 audited Madurai Anantha Masala packs — filter by collection, pack size, kitchen use, or search in Tamil and English."
+      subheading="Explore all 25 Madurai Anantha Masala packs — filter by collection, pack size, kitchen use, or search in Tamil and English."
       basePath="/products"
     />
   );

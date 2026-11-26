@@ -53,8 +53,7 @@ export default function StoryPage() {
           <p>
             We built this online store so families who discover our kitchen through Instagram Reels
             and YouTube can inspect every genuine pouch clearly, compare pack sizes honestly, and
-            choose either quick guest checkout or a direct WhatsApp conversation with our Madurai
-            team.
+            send their order directly through WhatsApp with our Madurai team.
           </p>
 
           <div className="rounded-3xl border border-[var(--border-strong)] bg-[var(--bg-surface)] p-6">

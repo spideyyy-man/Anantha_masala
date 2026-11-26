@@ -10,7 +10,6 @@ import {
   Plus,
   Minus,
   AlertTriangle,
-  ShieldCheck,
   Info,
   Truck,
   Check,
@@ -299,8 +298,8 @@ export function ProductDetailView({ product, relatedProducts }: ProductDetailVie
             )}
 
             <p className="mt-2.5 text-xs text-[var(--text-muted)]">
-              Genuine pouch photography from audited packaging ({activeImage?.sourceAssetFile}).
-              Switch to “Original Pack” or click “Inspect Label” to examine uncropped printed text.
+              Genuine product pouch photography. Switch to “Original Pack” or click “Inspect Label”
+              to read the printed label closely.
             </p>
           </div>
         </div>
@@ -659,7 +658,7 @@ export function ProductDetailView({ product, relatedProducts }: ProductDetailVie
             <section className="flex flex-col gap-2 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-sand)]/60 p-4 text-xs text-[var(--text-secondary)]">
               <p className="flex items-center gap-2 font-semibold text-[var(--text-primary)]">
                 <Truck className="h-4 w-4 text-[var(--brand-crimson)]" aria-hidden="true" />
-                Provisional Shipping: ₹49 Tamil Nadu • ₹79 Rest of India • Free on ₹499+
+                Shipping Estimate: ₹49 Tamil Nadu • ₹79 Rest of India • Free on orders ₹499+
               </p>
               <p>{BRAND.shippingRules.estimatedDispatchNote}</p>
               <div className="mt-1 flex flex-wrap gap-4 font-bold text-[var(--brand-crimson)]">
@@ -670,20 +669,6 @@ export function ProductDetailView({ product, relatedProducts }: ProductDetailVie
                 </Link>
               </div>
             </section>
-
-            {product.labelVerificationFlags.length > 0 && (
-              <details className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-4 text-xs">
-                <summary className="flex cursor-pointer items-center gap-2 font-semibold text-[var(--text-primary)]">
-                  <ShieldCheck className="h-4 w-4 text-[var(--brand-leaf)]" aria-hidden="true" />
-                  Packaging Verification Notes ({product.labelVerificationFlags.length})
-                </summary>
-                <ul className="mt-2.5 list-disc space-y-1.5 pl-5 text-[var(--text-secondary)]">
-                  {product.labelVerificationFlags.map((flag, i) => (
-                    <li key={i}>{flag}</li>
-                  ))}
-                </ul>
-              </details>
-            )}
           </div>
         </div>
       </div>

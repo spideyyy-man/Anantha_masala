@@ -11,7 +11,7 @@ export default function NotFound() {
         We couldn’t find that spice shelf.
       </h1>
       <p className="mt-3 text-sm text-[var(--text-secondary)]">
-        The link may have moved or been mistyped. Explore all 25 audited Madurai Anantha Masala
+        The link may have moved or been mistyped. Explore all 25 Madurai Anantha Masala
         products below.
       </p>
       <div className="mt-7 flex flex-wrap justify-center gap-3">
