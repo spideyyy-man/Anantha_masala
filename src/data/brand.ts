@@ -11,10 +11,10 @@ export const BRAND = {
   city: 'Madurai',
   state: 'Tamil Nadu',
   country: 'India',
-  /** Printed on 33/35 product labels and public Instagram bio (verify with operator before launch). */
-  phoneDisplay: '+91 98438 87337',
-  phoneRaw: '9843887337',
-  whatsappDigits: '919843887337',
+  /** Official business phone and WhatsApp number. */
+  phoneDisplay: '+91 78068 68545',
+  phoneRaw: '7806868545',
+  whatsappDigits: '917806868545',
   /** Printed on product packaging labels; confirm exact registered entity address before launch. */
   printedAddressTamil:
     'மதுரை ஆனந்தா மசாலா, மீனாட்சி நகர், அருப்புக்கோட்டை மெயின்ரோடு, வில்லபுரம், மதுரை - 625012',
@@ -25,7 +25,7 @@ export const BRAND = {
   legalEntityStatus: 'Pending business verification (Trading name: Madurai Anantha Masala)',
   gstinStatus: 'Pending business verification',
   grievanceOfficerStatus: 'Pending appointment & contact confirmation before production launch',
-  supportEmailPlaceholder: 'Pending official business domain email confirmation (contact +91 98438 87337)',
+  supportEmailPlaceholder: 'Pending official business domain email confirmation (contact +91 78068 68545)',
   social: {
     instagramHandle: '@madurai_anantha_masala',
     instagramUrl: 'https://www.instagram.com/madurai_anantha_masala/',
